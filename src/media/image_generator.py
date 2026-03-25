@@ -1,10 +1,9 @@
 """
 Carousel image generator (product path).
 
-Your repo largely runs on recovered bytecode (.pyc) when sources are missing.
-This file is a *real* source override to route `carousel_standard` through the
-Gemini "ArXiv Intel" generator (headline baked into the render; no grey/black
-bottom plates).
+`carousel_standard` uses Gemini plus a compositor layer. See `IMAGE_RENDER_MODE`:
+  - cinematic_overlay (default): text-free cinematic background + bold PIL headline band.
+  - arxiv_integrated: 3D isometric frames with headline baked into the image model.
 """
 
 from __future__ import annotations
@@ -47,9 +46,8 @@ class CarouselImageGenerator:
     """
     Production-facing carousel renderer.
 
-    Bytecode version exists in `__pycache__`. This source override ensures the
-    `carousel_standard` template uses Gemini renders that already contain the
-    headline in-image.
+    Bytecode version exists in `__pycache__`. This override routes `carousel_standard`
+    through `src.media.gemini_carousel_images.try_render_gemini_carousel`.
     """
 
     def __init__(self, template_path: Path | None = None) -> None:

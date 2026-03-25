@@ -44,6 +44,19 @@ HIGHLIGHT_WORDS = frozenset(
         "google",
         "apple",
         "microsoft",
+        "amazon",
+        "aws",
+        "meta",
+        "tesla",
+        "nvidia",
+        "data",
+        "center",
+        "quantum",
+        "chip",
+        "defense",
+        "policy",
+        "tariff",
+        "strike",
     }
 )
 
@@ -177,6 +190,103 @@ def _draw_word_line(
         cx += bbox[2] - bbox[0]
         max_bottom = max(max_bottom, y + (bbox[3] - bbox[1]))
     return max_bottom
+
+
+def _draw_centered_word_line(
+    draw: ImageDraw.ImageDraw,
+    y: int,
+    words: Sequence[str],
+    font: ImageFont.ImageFont,
+    canvas_w: int,
+    white: Tuple[int, int, int],
+    gold: Tuple[int, int, int],
+) -> int:
+    """Single headline line, centered, with gold/white keyword emphasis."""
+    if not words:
+        return y
+    line = " ".join(words)
+    bbox = draw.textbbox((0, 0), line, font=font)
+    line_w = bbox[2] - bbox[0]
+    x = max(0, (canvas_w - line_w) // 2)
+    return _draw_word_line(draw, x, y, words, font, white, gold)
+
+
+def compose_cinematic_news_slide(
+    base_rgb: Image.Image,
+    *,
+    headline: str,
+    font_title_candidates: List[str],
+    font_body_candidates: List[str],
+    highlight_rgb: Tuple[int, int, int],
+    primary_rgb: Tuple[int, int, int],
+    accent_rgb: Tuple[int, int, int],
+    handle: str = "",
+    logo_path: str = "",
+    band_start_frac: float = 0.62,
+    gradient_bridge_start: float = 0.45,
+) -> Image.Image:
+    """
+    Scroll-stopping “tech news” composite: full-bleed cinematic base (no text in source),
+    dark gradient bridge + solid lower band, centered ALL-CAPS headline with gold/white emphasis.
+
+    Matches high-performing IG templates: subject in upper ~60%, type in lower ~40%.
+    """
+    img = base_rgb.convert("RGB")
+    w, h = img.size
+
+    # Soften busy detail behind upcoming type (bridge), then solid band for legibility.
+    img = _darken_gradient_overlay(img, gradient_bridge_start)
+
+    band_y = int(h * band_start_frac)
+    draw0 = ImageDraw.Draw(img)
+    draw0.rectangle([0, band_y, w, h], fill=(0, 0, 0))
+    accent_line_y = band_y
+    draw0.line([(48, accent_line_y), (w - 48, accent_line_y)], fill=accent_rgb, width=3)
+
+    draw = ImageDraw.Draw(img)
+    margin = 48
+    max_tw = w - 2 * margin
+
+    y = band_y + 36
+    if (handle or "").strip():
+        hsmall = _pick_font(font_body_candidates, 22)
+        hb = (handle or "").strip()
+        bbox = draw.textbbox((0, 0), hb, font=hsmall)
+        hx = (w - (bbox[2] - bbox[0])) // 2
+        draw.text((hx, y), hb, font=hsmall, fill=(180, 190, 210))
+        y += (bbox[3] - bbox[1]) + 20
+
+    raw_head = " ".join((headline or "").split()).strip() or "TECH INTELLIGENCE UPDATE"
+    head_words = raw_head.upper().split()
+
+    lo, hi = 38, 64
+    best_font = _pick_font(font_title_candidates, lo)
+    best_lines: List[List[str]] = []
+    for sz in range(hi, lo - 1, -2):
+        trial_font = _pick_font(font_title_candidates, sz)
+        lines = _wrap_words_to_width(draw, head_words, trial_font, max_tw)
+        # Fit within band height
+        est = 0
+        for _ln in lines[:6]:
+            bb = draw.textbbox((0, 0), "Hg", font=trial_font)
+            est += bb[3] - bb[1] + 10
+        if len(lines) <= 5 and est <= (h - y - 40):
+            best_font = trial_font
+            best_lines = lines[:5]
+            break
+    if not best_lines:
+        best_font = _pick_font(font_title_candidates, lo)
+        best_lines = _wrap_words_to_width(draw, head_words, best_font, max_tw)[:5]
+
+    for line_words in best_lines:
+        y = _draw_centered_word_line(draw, y, line_words, best_font, w, primary_rgb, highlight_rgb)
+        hb = draw.textbbox((0, 0), "Hg", font=best_font)
+        y += hb[3] - hb[1] + 10
+
+    if logo_path:
+        _paste_asset_contain(img, logo_path, (36, 28, 36 + 200, 28 + 52))
+
+    return img
 
 
 def _arxiv_intel_scene_frame(

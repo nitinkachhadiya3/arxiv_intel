@@ -1,12 +1,17 @@
 """
-Gemini carousel frames: ArXiv Intel 3D isometric scenes with headline text baked into the render.
+Gemini carousel: product-grade “tech news” visuals.
 
-No PIL caption plates or grey/black lower-third bars — only optional thin border + canvas fit.
+Default pipeline (cinematic_overlay):
+  1) Gemini generates a **text-free** cinematic background (subject in upper ~60%).
+  2) PIL compositor adds gradient + solid lower band + bold headline (gold/white emphasis).
+
+Optional: IMAGE_RENDER_MODE=arxiv_integrated — 3D isometric slides with type baked into the render.
 """
 
 from __future__ import annotations
 
 import io
+import json
 import os
 import re
 import time
@@ -17,8 +22,11 @@ from google import genai
 from google.genai import types
 from PIL import Image, ImageOps
 
-from src.media.editorial_compositor import compose_editorial_slide
-from src.media.image_generator import CarouselImageGenerator, save_rgb_jpeg_under_limit
+from src.media.editorial_compositor import (
+    compose_cinematic_news_slide,
+    compose_editorial_slide,
+)
+from src.media.image_generator import save_rgb_jpeg_under_limit
 from src.utils.config import AppConfig
 from src.utils.gemini_models import gemini_image_model_candidates, is_gemini_model_unavailable_error
 from src.utils.logger import get_logger, log_stage
@@ -55,6 +63,64 @@ def _image_size_for_request(cfg: AppConfig) -> str | None:
     if raw.upper() in ("1K", "2K", "4K"):
         return raw.upper()
     return None
+
+
+def _load_branding() -> dict:
+    path = Path(__file__).resolve().parent / "templates" / "branding.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def image_render_mode() -> str:
+    """cinematic_overlay | arxiv_integrated"""
+    m = (os.getenv("IMAGE_RENDER_MODE") or "cinematic_overlay").strip().lower()
+    if m in ("arxiv_integrated", "integrated", "3d"):
+        return "arxiv_integrated"
+    return "cinematic_overlay"
+
+
+def build_cinematic_background_prompt(
+    *,
+    topic_title: str,
+    slide_role: str,
+    semantic_visual_hint: str,
+    slide_index: int,
+    total_slides: int,
+) -> str:
+    """
+    Image-only prompt: dramatic cinematic scene, room for PIL headline band below.
+    Ethical guardrails: no fake disasters, no real logos, no on-image text.
+    """
+    topic = _normalize_headline(topic_title or "technology", 200)
+    hint = (semantic_visual_hint or "").strip()[:500]
+    role = (slide_role or "Slide").strip()
+    hint_block = f"Scene direction: {hint}\n" if hint else ""
+
+    return f"""
+You are generating a single still image for a premium tech-news Instagram post (brand: ArXiv Intel).
+
+Story context (for you only — DO NOT render as text): {topic}
+Slide {slide_index} of {total_slides}. Narrative role: {role}.
+{hint_block}
+
+Visual style:
+- Ultra-detailed cinematic 3D or photoreal still, dramatic lighting, high contrast, sharp focus
+- News-worthy energy without sensationalist hoaxes
+- Professional photography / blockbuster color grade; depth and atmosphere
+
+Composition (mandatory):
+- Place the main subject and action in the UPPER ~60% of the frame (rule of thirds / centered hero)
+- Keep the LOWER ~35–40% calmer (sky, floor, haze, bokeh, simple geometry) so text can be added later
+- Vertical portrait framing mindset (tall)
+
+ABSOLUTE RULES:
+- NO text, letters, numbers, logos, watermarks, captions, UI, or HUD in the image
+- NO photorealistic identifiable celebrities or politicians
+- NO depictions of real-world disasters, terror, gore, or “company HQ on fire / explosion” scenes
+- If tension is needed, use symbolic tech imagery (abstract energy, generic silhouettes, maps, networks) not hoax photojournalism
+- Do not invent specific breaking-news events; illustrate the industry theme visually
+
+Output: one high-end editorial still, no border, no lettering.
+""".strip()
 
 
 def build_arxiv_intel_master_prompt(
@@ -160,6 +226,17 @@ def _generate_slide_pil(
     return img
 
 
+def _hex_to_rgb(hex_str: str) -> tuple[int, int, int]:
+    s = (hex_str or "").strip().lower()
+    if s.startswith("#"):
+        s = s[1:]
+    if len(s) == 3:
+        s = "".join(ch * 2 for ch in s)
+    if len(s) != 6:
+        return (56, 189, 248)
+    return tuple(int(s[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[misc]
+
+
 def try_render_gemini_carousel(
     cfg: AppConfig,
     slug: str,
@@ -174,10 +251,13 @@ def try_render_gemini_carousel(
     profile_path: str = "",
 ) -> Optional[List[str]]:
     """
-    Render carousel JPEGs via Gemini image model + light post-process (no text overlay plates).
+    Render carousel JPEGs via Gemini + compositor.
 
-    overlay_texts, if provided, overrides slide_texts (matches legacy call sites).
-    profile_path is ignored for layout (CTA is generated in-scene on the last slide).
+    Default: cinematic background (no text in model) + PIL headline band (scroll-stopping template).
+    Set IMAGE_RENDER_MODE=arxiv_integrated for the older in-image 3D typography path.
+
+    overlay_texts, if provided, overrides slide_texts (legacy).
+    profile_path is ignored.
     """
     _ = (post_template, profile_path)
     api_key = (getattr(cfg, "gemini_api_key", None) or os.getenv("GEMINI_API_KEY") or "").strip()
@@ -189,19 +269,21 @@ def try_render_gemini_carousel(
     if not texts:
         return None
 
-    gen = CarouselImageGenerator()
-    brand = gen._brand  # noqa: SLF001 — matches bytecode helper access pattern
+    mode = image_render_mode()
+    brand = _load_branding()
     tw = int(brand.get("canvas_width", brand.get("canvas_size", 1080)))
     th = int(brand.get("canvas_height", int(tw * 1.25)))
     max_bytes = int(brand.get("max_jpeg_bytes", 8_388_608))
     scene_brand = str(brand.get("scene_brand_name", brand.get("slide_label", "ArXiv Intel")))
     roles = list(brand.get("slide_role_labels", []))
-    accent = gen._hex_to_rgb(str(brand.get("accent", "#38bdf8")))  # noqa: SLF001
-    highlight = gen._hex_to_rgb(str(brand.get("highlight_color", "#fbbf24")))  # noqa: SLF001
-    primary = gen._hex_to_rgb(str(brand.get("primary_text", "#f1f5f9")))  # noqa: SLF001
-    muted = gen._hex_to_rgb(str(brand.get("muted", "#64748b")))  # noqa: SLF001
+    accent = _hex_to_rgb(str(brand.get("accent", "#38bdf8")))
+    highlight = _hex_to_rgb(str(brand.get("highlight_color", "#fbbf24")))
+    primary = _hex_to_rgb(str(brand.get("primary_text", "#f1f5f9")))
+    muted = _hex_to_rgb(str(brand.get("muted", "#64748b")))
     title_fonts = list(brand.get("font_title_candidates", []))
     body_fonts = list(brand.get("font_body_candidates", []))
+    handle = str(brand.get("instagram_handle", "") or "").strip()
+    logo_path = str(brand.get("logo_path", "") or "").strip()
 
     aspect = _aspect_ratio_for_request(cfg)
     image_size = _image_size_for_request(cfg)
@@ -218,25 +300,34 @@ def try_render_gemini_carousel(
         _LOG,
         "gemini_carousel_start",
         "rendering",
-        extra={"slug": slug, "slides": total, "aspect_ratio": aspect, "models": models},
+        extra={"slug": slug, "slides": total, "aspect_ratio": aspect, "models": models, "mode": mode},
     )
 
     for i, body in enumerate(texts, start=1):
         role = roles[i - 1] if i - 1 < len(roles) else f"Slide {i}"
         hint = vp[i - 1] if i - 1 < len(vp) else ""
         headline = (cover_headline.strip() if i == 1 and cover_headline else body).strip()
-        headline = _normalize_headline(headline, 200)
+        headline = _normalize_headline(headline, 220)
 
-        prompt = build_arxiv_intel_master_prompt(
-            headline=headline,
-            topic_title=topic_title or slug.replace("_", " "),
-            slide_role=role,
-            semantic_visual_hint=hint,
-            slide_index=i,
-            total_slides=total,
-            brand_scene_name=scene_brand,
-            is_last_slide=(i == total),
-        )
+        if mode == "arxiv_integrated":
+            prompt = build_arxiv_intel_master_prompt(
+                headline=headline,
+                topic_title=topic_title or slug.replace("_", " "),
+                slide_role=role,
+                semantic_visual_hint=hint,
+                slide_index=i,
+                total_slides=total,
+                brand_scene_name=scene_brand,
+                is_last_slide=(i == total),
+            )
+        else:
+            prompt = build_cinematic_background_prompt(
+                topic_title=topic_title or headline or slug.replace("_", " "),
+                slide_role=role,
+                semantic_visual_hint=hint,
+                slide_index=i,
+                total_slides=total,
+            )
 
         raw: Optional[Image.Image] = None
         last_err: Optional[BaseException] = None
@@ -264,30 +355,48 @@ def try_render_gemini_carousel(
             return None
 
         fitted = _fit_canvas(raw, tw, th)
-        composed = compose_editorial_slide(
-            fitted,
-            role=role,
-            body=body,
-            slide_idx=i,
-            total_slides=total,
-            brand_label=str(brand.get("slide_label", "ARXIV INTEL")),
-            accent_rgb=accent,
-            highlight_rgb=highlight,
-            muted_rgb=muted,
-            primary_rgb=primary,
-            font_title_candidates=title_fonts,
-            font_body_candidates=body_fonts,
-            topic_kicker=topic_title[:80] if topic_title else "",
-            cover_headline=cover_headline if i == 1 else "",
-            layout_variant="arxiv_intel_scene",
-            profile_path="",
-        )
 
-        # Match the existing pipeline naming convention (`slide_01.jpg`, ...).
+        if mode == "arxiv_integrated":
+            composed = compose_editorial_slide(
+                fitted,
+                role=role,
+                body=body,
+                slide_idx=i,
+                total_slides=total,
+                brand_label=str(brand.get("slide_label", "ARXIV INTEL")),
+                accent_rgb=accent,
+                highlight_rgb=highlight,
+                muted_rgb=muted,
+                primary_rgb=primary,
+                font_title_candidates=title_fonts,
+                font_body_candidates=body_fonts,
+                topic_kicker=topic_title[:80] if topic_title else "",
+                cover_headline=cover_headline if i == 1 else "",
+                layout_variant="arxiv_intel_scene",
+                profile_path="",
+            )
+        else:
+            composed = compose_cinematic_news_slide(
+                fitted,
+                headline=headline,
+                font_title_candidates=title_fonts,
+                font_body_candidates=body_fonts,
+                highlight_rgb=highlight,
+                primary_rgb=primary,
+                accent_rgb=accent,
+                handle=handle,
+                logo_path=logo_path,
+            )
+
+        meta_dir = out_dir / "_meta"
+        meta_dir.mkdir(parents=True, exist_ok=True)
+        meta_path = meta_dir / f"slide_{i:02d}_prompt.txt"
+        meta_path.write_text(prompt + "\n", encoding="utf-8")
+
         out_path = out_dir / f"slide_{i:02d}.jpg"
         save_rgb_jpeg_under_limit(composed, out_path, max_bytes=max_bytes)
         paths.append(str(out_path))
         time.sleep(0.4)
 
-    log_stage(_LOG, "gemini_carousel_done", "ok", extra={"slug": slug, "paths": len(paths)})
+    log_stage(_LOG, "gemini_carousel_done", "ok", extra={"slug": slug, "paths": len(paths), "mode": mode})
     return paths
