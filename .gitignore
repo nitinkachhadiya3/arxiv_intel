@@ -23,3 +23,7 @@ src/output/
 # Logs
 *.log
 
+# Local SSH debug captures
+ssh_debug.txt
+ssh_debug_*.txt
+
