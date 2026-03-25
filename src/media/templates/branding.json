@@ -1,0 +1,70 @@
+{
+  "canvas_size": 1080,
+  "canvas_width": 1080,
+  "canvas_height": 1350,
+  "background": "#0f172a",
+  "background_footer": "#020617",
+  "footer_band_height": 140,
+  "primary_text": "#f1f5f9",
+  "secondary_text": "#94a3b8",
+  "accent": "#38bdf8",
+  "highlight_color": "#fbbf24",
+  "editorial_gradient_start": 0.34,
+  "muted": "#64748b",
+  "margin": 72,
+  "accent_bar_height": 10,
+  "accent_stripe_width": 5,
+  "slide_label": "ARXIV INTEL",
+  "scene_brand_name": "ArXiv Intel",
+  "slide_role_labels": ["Hook", "What happened", "Why it matters", "Key details", "CTA"],
+  "swipe_hint": "Swipe for more ->",
+  "max_jpeg_bytes": 8388608,
+  "font_title_candidates": [
+    "/System/Library/Fonts/Supplemental/Arial Black.ttf",
+    "/System/Library/Fonts/Supplemental/Impact.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+  ],
+  "font_body_candidates": [
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+  ],
+  "themes": [
+    {
+      "name": "slate_cyan",
+      "background": "#0f172a",
+      "background_footer": "#020617",
+      "primary_text": "#f1f5f9",
+      "secondary_text": "#94a3b8",
+      "accent": "#38bdf8",
+      "muted": "#64748b",
+      "pill_fill": [30, 41, 59],
+      "dot_inactive": [51, 65, 85]
+    },
+    {
+      "name": "deep_violet",
+      "background": "#1e1033",
+      "background_footer": "#0f0620",
+      "primary_text": "#f5f3ff",
+      "secondary_text": "#c4b5fd",
+      "accent": "#a78bfa",
+      "muted": "#8b7caf",
+      "pill_fill": [46, 32, 74],
+      "dot_inactive": [67, 56, 94]
+    },
+    {
+      "name": "ocean_navy",
+      "background": "#0a1628",
+      "background_footer": "#040d18",
+      "primary_text": "#e0f2fe",
+      "secondary_text": "#7dd3fc",
+      "accent": "#0ea5e9",
+      "muted": "#5c7a92",
+      "pill_fill": [22, 42, 62],
+      "dot_inactive": [38, 58, 78]
+    }
+  ]
+}

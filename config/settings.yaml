@@ -1,0 +1,85 @@
+# App tuning only (RSS, paths, scoring). Keys, tokens, and channel IDs → .env
+
+rss:
+  feed_urls:
+    - https://techcrunch.com/feed/
+    - https://www.theverge.com/rss/index.xml
+    - https://feeds.arstechnica.com/arstechnica/index
+
+verification:
+  trusted_domains:
+    - techcrunch.com
+    - theverge.com
+    - arstechnica.com
+    - reuters.com
+    - bbc.com
+    - wired.com
+
+intelligence:
+  recency_weight: 0.25
+  trend_weight: 0.25
+  credibility_weight: 0.35
+  source_weight: 0.15
+
+# Duplicate-topic guard + LLM temperature for carousels
+publishing:
+  repeat_similar_jaccard: 0.52
+  repeat_cooldown_hours: 48
+  repeat_update_min_hours: 12
+  carousel_temperature: 0.42
+
+pipeline:
+  top_topics_min: 3
+  top_topics_max: 5
+  similarity_threshold: 0.72
+  headline_merge_jaccard: 0.38
+  cross_outlet_title_cosine: 0.28
+  min_cluster_sources: 2
+  max_source_count_cap: 5
+
+paths:
+  data_raw: data/raw
+  data_processed: data/processed
+  output_images: output/images
+  output_posts: output/posts
+  sqlite: data/processed/pipeline.db
+
+scheduler:
+  ingestion_interval_minutes: 30
+  full_pipeline_runs_per_day: 3
+  full_pipeline_at: []
+
+trends:
+  geo: IN
+  fallback_file: null
+  # pytrends is flaky — full client re-fetch attempts + pause (HTTP retries inside pytrends often break on urllib3 v2)
+  google_safe_attempts: 3
+  google_safe_sleep_seconds: 2
+  # RSS-first: spikes + corpus TF–IDF, then Google fill, then LLM if still thin
+  merge_corpus_first: true
+  spike_signals_enabled: true
+  spike_min_ratio: 2.0
+  spike_min_abs: 2
+  llm_fallback_enabled: true
+  llm_fallback_min_count: 8
+  # When Google Trends fails, extract keywords from RSS (AI/tech seeds + TF–IDF)
+  corpus_signals:
+    enabled: true
+    merge_with_google: true
+    max_signals: 40
+    min_doc_frequency: 2
+    seed_phrases:
+      - ai
+      - artificial intelligence
+      - machine learning
+      - llm
+      - agent
+      - agentic
+      - automation
+      - chip
+      - nvidia
+      - cloud
+      - security
+      - startup
+      - regulation
+      - enterprise
