@@ -12,7 +12,7 @@ import json
 import os
 import random
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from PIL import Image
 
@@ -77,6 +77,8 @@ class CarouselImageGenerator:
         overlay_texts: List[str] | None = None,
         visual_prompts: List[str] | None = None,
         post_template: str = "carousel_standard",
+        slide_bodies: List[str] | None = None,
+        story_post: Dict[str, Any] | None = None,
     ) -> List[Path]:
         cfg = get_config()
         slides = list(overlay_texts if overlay_texts is not None else slide_texts)
@@ -101,6 +103,8 @@ class CarouselImageGenerator:
                     overlay_texts=slides,
                     visual_prompts=visual_prompts,
                     post_template=post_template,
+                    slide_bodies=slide_bodies,
+                    story_post=story_post,
                 )
                 if paths:
                     return [Path(p) for p in paths]

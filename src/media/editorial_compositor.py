@@ -224,6 +224,8 @@ def compose_cinematic_news_slide(
     logo_path: str = "",
     band_start_frac: float = 0.62,
     gradient_bridge_start: float = 0.45,
+    sublines: Optional[Sequence[str]] = None,
+    show_handle: bool = True,
 ) -> Image.Image:
     """
     Scroll-stopping “tech news” composite: full-bleed cinematic base (no text in source),
@@ -248,7 +250,7 @@ def compose_cinematic_news_slide(
     max_tw = w - 2 * margin
 
     y = band_y + 36
-    if (handle or "").strip():
+    if show_handle and (handle or "").strip():
         hsmall = _pick_font(font_body_candidates, 22)
         hb = (handle or "").strip()
         bbox = draw.textbbox((0, 0), hb, font=hsmall)
@@ -282,6 +284,107 @@ def compose_cinematic_news_slide(
         y = _draw_centered_word_line(draw, y, line_words, best_font, w, primary_rgb, highlight_rgb)
         hb = draw.textbbox((0, 0), "Hg", font=best_font)
         y += hb[3] - hb[1] + 10
+
+    if sublines:
+        sub_font = _pick_font(font_body_candidates, 30)
+        muted_line = (160, 170, 190)
+        y += 8
+        for raw in list(sublines)[:2]:
+            line = " ".join(str(raw or "").split()).strip()
+            if not line:
+                continue
+            for line_words in _wrap_words_to_width(draw, line.upper().split(), sub_font, max_tw)[:2]:
+                y = _draw_centered_word_line(draw, y, line_words, sub_font, w, muted_line, highlight_rgb)
+                sb = draw.textbbox((0, 0), "Hg", font=sub_font)
+                y += sb[3] - sb[1] + 6
+
+    if logo_path:
+        _paste_asset_contain(img, logo_path, (36, 28, 36 + 200, 28 + 52))
+
+    return img
+
+
+def compose_cinematic_blueprint_slide(
+    base_rgb: Image.Image,
+    *,
+    headline: str,
+    detail_lines: Sequence[str],
+    font_title_candidates: List[str],
+    font_body_candidates: List[str],
+    highlight_rgb: Tuple[int, int, int],
+    primary_rgb: Tuple[int, int, int],
+    accent_rgb: Tuple[int, int, int],
+    logo_path: str = "",
+    band_start_frac: float = 0.60,
+    gradient_bridge_start: float = 0.42,
+    slide_label: str = "",
+) -> Image.Image:
+    """
+    Carousel tail: simpler “slate” — one headline block + short supporting lines (one idea per slide).
+    No handle; optional corner logo; optional small slide_label above headline.
+    """
+    img = base_rgb.convert("RGB")
+    w, h = img.size
+    img = _darken_gradient_overlay(img, gradient_bridge_start)
+
+    band_y = int(h * band_start_frac)
+    draw0 = ImageDraw.Draw(img)
+    draw0.rectangle([0, band_y, w, h], fill=(0, 0, 0))
+    draw0.line([(48, band_y), (w - 48, band_y)], fill=accent_rgb, width=2)
+
+    draw = ImageDraw.Draw(img)
+    margin = 48
+    max_tw = w - 2 * margin
+    y = band_y + 28
+
+    if (slide_label or "").strip():
+        lf = _pick_font(font_body_candidates, 22)
+        lab = (slide_label or "").strip().upper()
+        bbox = draw.textbbox((0, 0), lab, font=lf)
+        lx = max(margin, (w - (bbox[2] - bbox[0])) // 2)
+        draw.text((lx, y), lab, font=lf, fill=(120, 130, 150))
+        y += (bbox[3] - bbox[1]) + 14
+
+    raw_head = " ".join((headline or "").split()).strip() or "DETAIL"
+    head_words = raw_head.upper().split()
+
+    lo, hi = 32, 52
+    best_font = _pick_font(font_title_candidates, lo)
+    best_lines: List[List[str]] = []
+    for sz in range(hi, lo - 1, -2):
+        trial_font = _pick_font(font_title_candidates, sz)
+        lines = _wrap_words_to_width(draw, head_words, trial_font, max_tw)
+        est = 0
+        for _ln in lines[:4]:
+            bb = draw.textbbox((0, 0), "Hg", font=trial_font)
+            est += bb[3] - bb[1] + 8
+        if len(lines) <= 4 and est <= (h - y - 120):
+            best_font = trial_font
+            best_lines = lines[:4]
+            break
+    if not best_lines:
+        best_font = _pick_font(font_title_candidates, lo)
+        best_lines = _wrap_words_to_width(draw, head_words, best_font, max_tw)[:4]
+
+    for line_words in best_lines:
+        y = _draw_centered_word_line(draw, y, line_words, best_font, w, primary_rgb, highlight_rgb)
+        hb = draw.textbbox((0, 0), "Hg", font=best_font)
+        y += hb[3] - hb[1] + 8
+
+    body_font = _pick_font(font_body_candidates, 26)
+    muted = (175, 184, 198)
+    y += 10
+    for raw in list(detail_lines)[:4]:
+        text = " ".join(str(raw or "").split()).strip()
+        if not text:
+            continue
+        prefixed = text if text.startswith(("►", "▸", "—", "-", "•")) else f"— {text}"
+        for line_words in _wrap_words_to_width(draw, prefixed.split(), body_font, max_tw)[:2]:
+            y = _draw_centered_word_line(draw, y, line_words, body_font, w, muted, highlight_rgb)
+            sb = draw.textbbox((0, 0), "Hg", font=body_font)
+            y += sb[3] - sb[1] + 4
+        if y > h - 36:
+            break
 
     if logo_path:
         _paste_asset_contain(img, logo_path, (36, 28, 36 + 200, 28 + 52))

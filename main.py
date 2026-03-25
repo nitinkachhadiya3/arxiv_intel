@@ -104,6 +104,14 @@ def _cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--post-instagram", action="store_true", help="Generate and publish a carousel to Instagram")
     parser.add_argument(
+        "--render-post",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="POST_JSON",
+        help="Render carousel JPEGs from a post JSON (default: newest file in output/posts/). Does not publish.",
+    )
+    parser.add_argument(
         "--use-pyc-bootstrap",
         action="store_true",
         help="Run the legacy bytecode bootstrap (not recommended).",
@@ -113,38 +121,52 @@ def _cli(argv: list[str] | None = None) -> int:
     if args.use_pyc_bootstrap:
         return _run_main_pyc()
 
-    if not args.post_instagram:
+    if not args.post_instagram and args.render_post is None:
         parser.print_help()
         return 0
 
-    cfg = get_config()
+    if args.post_instagram and args.render_post is not None:
+        parser.error("Choose either --post-instagram or --render-post, not both.")
 
-    # Pick latest generated post as a source of (topic, caption, headlines, visual prompts).
+    cfg = get_config()
     posts_dir = root / "output" / "posts"
     if not posts_dir.is_dir():
         raise FileNotFoundError(f"Missing posts directory: {posts_dir}")
-    candidates = sorted([p for p in posts_dir.glob("*.json") if p.is_file()])
-    if not candidates:
+    post_candidates = sorted([p for p in posts_dir.glob("*.json") if p.is_file()])
+    if not post_candidates:
         raise FileNotFoundError(f"No post JSON files found in {posts_dir}")
-    latest = candidates[-1]
-    post = json.loads(latest.read_text(encoding="utf-8"))
+
+    def _resolve_post_path(spec: str | None) -> Path:
+        if spec is None or str(spec).strip() == "":
+            return post_candidates[-1]
+        p = Path(spec)
+        if p.is_file():
+            return p.resolve()
+        alt = (posts_dir / spec).resolve()
+        if alt.is_file():
+            return alt
+        raise FileNotFoundError(f"Post JSON not found: {spec}")
+
+    post_path = _resolve_post_path(None if args.post_instagram else args.render_post)
+    post = json.loads(post_path.read_text(encoding="utf-8"))
 
     slide_texts: list[str] = list(post.get("poster_headlines") or [])
     if not slide_texts:
-        # Fallback: use the slide bodies if poster_headlines are missing.
         slide_texts = list(post.get("slides") or [])
     if not slide_texts:
-        raise ValueError(f"Post JSON has no headlines/slides: {latest}")
+        raise ValueError(f"Post JSON has no headlines/slides: {post_path}")
 
-    cover_headline = (slide_texts[0] or "").strip()
-    topic_title = str(post.get("topic") or latest.stem)
+    cover_headline = str(post.get("cover_headline") or (slide_texts[0] or "")).strip()
+    topic_title = str(post.get("topic") or post_path.stem)
     visual_prompts = post.get("visual_prompts") or None
     caption = str(post.get("caption") or "")
+    slide_bodies = list(post.get("slides") or [])
 
-    out_dir = root / "output" / "images" / f"cli_instagram_test_{latest.stem}"
+    out_slug = post_path.stem
+    out_dir = root / "output" / "images" / (f"render_{out_slug}" if args.render_post is not None else f"cli_instagram_test_{out_slug}")
     gen = CarouselImageGenerator()
     paths = gen.render_topic_slides(
-        topic_slug=latest.stem,
+        topic_slug=out_slug,
         slide_texts=slide_texts,
         out_dir=out_dir,
         topic_title=topic_title,
@@ -152,10 +174,18 @@ def _cli(argv: list[str] | None = None) -> int:
         overlay_texts=slide_texts,
         visual_prompts=visual_prompts,
         post_template=str(post.get("template_style") or "carousel_standard"),
+        slide_bodies=slide_bodies if slide_bodies else None,
+        story_post=post,
     )
 
     if not paths:
-        raise RuntimeError("Image generation produced no slides; refusing to publish.")
+        raise RuntimeError("Image generation produced no slides.")
+
+    if args.render_post is not None:
+        print(f"Rendered {len(paths)} slides to {out_dir}")
+        for p in paths:
+            print(Path(p).resolve())
+        return 0
 
     publisher = InstagramPublisher(cfg)
     ok, msg = publisher.validate_credentials()

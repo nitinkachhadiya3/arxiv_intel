@@ -16,13 +16,15 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from google import genai
 from google.genai import types
 from PIL import Image, ImageOps
 
+from src.content.story_brief import ensure_story_brief
 from src.media.editorial_compositor import (
+    compose_cinematic_blueprint_slide,
     compose_cinematic_news_slide,
     compose_editorial_slide,
 )
@@ -226,6 +228,14 @@ def _generate_slide_pil(
     return img
 
 
+def _strip_lead_icon(s: str) -> str:
+    t = (s or "").strip()
+    for p in ("►", "▸", "▶", "•"):
+        if t.startswith(p):
+            t = t[len(p) :].strip()
+    return t
+
+
 def _hex_to_rgb(hex_str: str) -> tuple[int, int, int]:
     s = (hex_str or "").strip().lower()
     if s.startswith("#"):
@@ -249,6 +259,8 @@ def try_render_gemini_carousel(
     visual_prompts: Optional[Sequence[str]] = None,
     post_template: str = "carousel_standard",
     profile_path: str = "",
+    story_post: Optional[Dict[str, Any]] = None,
+    slide_bodies: Optional[Sequence[str]] = None,
 ) -> Optional[List[str]]:
     """
     Render carousel JPEGs via Gemini + compositor.
@@ -258,6 +270,8 @@ def try_render_gemini_carousel(
 
     overlay_texts, if provided, overrides slide_texts (legacy).
     profile_path is ignored.
+    story_post: optional full post dict for `ensure_story_brief` (topic, slides, sources, ...).
+    slide_bodies: optional long-form slide copy (aligned with poster headlines); feeds strategist + detail slates.
     """
     _ = (post_template, profile_path)
     api_key = (getattr(cfg, "gemini_api_key", None) or os.getenv("GEMINI_API_KEY") or "").strip()
@@ -268,6 +282,36 @@ def try_render_gemini_carousel(
     texts = list(overlay_texts if overlay_texts is not None else slide_texts)
     if not texts:
         return None
+
+    bodies_list: List[str] = list(slide_bodies) if slide_bodies is not None else []
+    vp = list(visual_prompts) if visual_prompts else []
+
+    base_post: Dict[str, Any] = {
+        "topic": topic_title or slug.replace("_", " "),
+        "slides": bodies_list if bodies_list else list(texts),
+        "poster_headlines": list(texts),
+        "visual_prompts": list(vp),
+        "cover_headline": (cover_headline or (texts[0] if texts else "")).strip(),
+        "sources": [],
+    }
+    if story_post:
+        for k in ("topic", "slides", "poster_headlines", "visual_prompts", "cover_headline", "sources"):
+            if k in story_post and story_post[k]:
+                base_post[k] = story_post[k]  # type: ignore[index]
+    brief = ensure_story_brief(base_post, cfg)
+    plan_raw = brief.get("slide_plan")
+    plan: List[Dict[str, Any]] = list(plan_raw) if isinstance(plan_raw, list) and plan_raw else []
+    if not plan:
+        plan = [
+            {
+                "role": "hook",
+                "headline": ((texts[0] if texts else cover_headline) or "TECH UPDATE").upper(),
+                "one_idea": "",
+                "visual_hint": vp[0] if vp else "",
+            }
+        ]
+    if str(brief.get("content_type") or "carousel").lower() == "single":
+        plan = plan[:1]
 
     mode = image_render_mode()
     brand = _load_branding()
@@ -291,23 +335,65 @@ def try_render_gemini_carousel(
     models = gemini_image_model_candidates(cfg)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    meta_root = out_dir / "_meta"
+    meta_root.mkdir(parents=True, exist_ok=True)
+    (meta_root / "story_brief.json").write_text(json.dumps(brief, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    total = len(texts)
+    total = len(plan)
     paths: List[str] = []
-    vp = list(visual_prompts) if visual_prompts else []
+
+    d1 = _strip_lead_icon(str(brief.get("all_in_one_datapoint_1") or ""))
+    d2 = _strip_lead_icon(str(brief.get("all_in_one_datapoint_2") or ""))
+    hook_sel = str(brief.get("hook_selected") or "").strip()
 
     log_stage(
         _LOG,
         "gemini_carousel_start",
         "rendering",
-        extra={"slug": slug, "slides": total, "aspect_ratio": aspect, "models": models, "mode": mode},
+        extra={
+            "slug": slug,
+            "slides": total,
+            "story_type": brief.get("content_type"),
+            "aspect_ratio": aspect,
+            "models": models,
+            "mode": mode,
+        },
     )
 
-    for i, body in enumerate(texts, start=1):
-        role = roles[i - 1] if i - 1 < len(roles) else f"Slide {i}"
-        hint = vp[i - 1] if i - 1 < len(vp) else ""
-        headline = (cover_headline.strip() if i == 1 and cover_headline else body).strip()
-        headline = _normalize_headline(headline, 220)
+    for i in range(1, total + 1):
+        idx = i - 1
+        pl = plan[idx] if idx < len(plan) else {}
+        role = str(pl.get("role") or (roles[idx] if idx < len(roles) else f"Slide {i}"))
+        hl_plan = str(pl.get("headline") or "").strip()
+        hint = str(pl.get("visual_hint") or "").strip()
+        if not hint and idx < len(vp):
+            hint = vp[idx]
+        one_idea = str(pl.get("one_idea") or "").strip()
+
+        editor_body = ""
+        if bodies_list and idx < len(bodies_list) and bodies_list[idx]:
+            editor_body = bodies_list[idx]
+        elif idx < len(texts):
+            editor_body = texts[idx]
+
+        if i == 1:
+            headline = (hook_sel or hl_plan or (cover_headline.strip() if cover_headline else "") or (texts[0] if texts else "")).strip()
+            headline = _normalize_headline(headline, 220)
+            sublines_list: Optional[List[str]] = [d1, d2] if (d1 or d2) else None
+        else:
+            headline = (hl_plan or (texts[idx] if idx < len(texts) else "") or one_idea or editor_body).strip()
+            headline = _normalize_headline(headline, 220)
+            sublines_list = None
+
+        detail_lines: List[str] = []
+        if i > 1:
+            if editor_body:
+                detail_lines.append(editor_body[:220])
+            if one_idea and one_idea not in (editor_body[:80] if editor_body else ""):
+                detail_lines.insert(0, one_idea[:200])
+            if not detail_lines and hl_plan:
+                detail_lines.append(hl_plan[:200])
+            detail_lines = detail_lines[:3]
 
         if mode == "arxiv_integrated":
             prompt = build_arxiv_intel_master_prompt(
@@ -360,7 +446,7 @@ def try_render_gemini_carousel(
             composed = compose_editorial_slide(
                 fitted,
                 role=role,
-                body=body,
+                body=editor_body or headline,
                 slide_idx=i,
                 total_slides=total,
                 brand_label=str(brand.get("slide_label", "ARXIV INTEL")),
@@ -375,7 +461,7 @@ def try_render_gemini_carousel(
                 layout_variant="arxiv_intel_scene",
                 profile_path="",
             )
-        else:
+        elif i == 1:
             composed = compose_cinematic_news_slide(
                 fitted,
                 headline=headline,
@@ -386,11 +472,25 @@ def try_render_gemini_carousel(
                 accent_rgb=accent,
                 handle=handle,
                 logo_path=logo_path,
+                sublines=sublines_list,
+                show_handle=True,
+            )
+        else:
+            label_slide = str(brand.get("slide_label", "ARXIV INTEL"))
+            composed = compose_cinematic_blueprint_slide(
+                fitted,
+                headline=headline,
+                detail_lines=detail_lines or [headline],
+                font_title_candidates=title_fonts,
+                font_body_candidates=body_fonts,
+                highlight_rgb=highlight,
+                primary_rgb=primary,
+                accent_rgb=accent,
+                logo_path=logo_path,
+                slide_label=f"{label_slide} · {i}/{total}",
             )
 
-        meta_dir = out_dir / "_meta"
-        meta_dir.mkdir(parents=True, exist_ok=True)
-        meta_path = meta_dir / f"slide_{i:02d}_prompt.txt"
+        meta_path = meta_root / f"slide_{i:02d}_prompt.txt"
         meta_path.write_text(prompt + "\n", encoding="utf-8")
 
         out_path = out_dir / f"slide_{i:02d}.jpg"
