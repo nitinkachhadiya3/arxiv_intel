@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+import os
 
 HIGHLIGHT_WORDS = frozenset(
     {
@@ -226,6 +227,7 @@ def compose_cinematic_news_slide(
     gradient_bridge_start: float = 0.45,
     sublines: Optional[Sequence[str]] = None,
     show_handle: bool = True,
+    logo_in_band: bool = True,
 ) -> Image.Image:
     """
     Scroll-stopping “tech news” composite: full-bleed cinematic base (no text in source),
@@ -240,16 +242,14 @@ def compose_cinematic_news_slide(
     img = _darken_gradient_overlay(img, gradient_bridge_start)
 
     band_y = int(h * band_start_frac)
-    draw0 = ImageDraw.Draw(img)
-    draw0.rectangle([0, band_y, w, h], fill=(0, 0, 0))
-    accent_line_y = band_y
-    draw0.line([(48, accent_line_y), (w - 48, accent_line_y)], fill=accent_rgb, width=3)
+    img = _apply_frosted_band(img, band_y)
+    _draw_divider_with_logo(img, y=band_y + 18, accent_rgb=accent_rgb, logo_path=(logo_path if logo_in_band else ""))
 
     draw = ImageDraw.Draw(img)
     margin = 48
     max_tw = w - 2 * margin
 
-    y = band_y + 36
+    y = band_y + 48
     if show_handle and (handle or "").strip():
         hsmall = _pick_font(font_body_candidates, 22)
         hb = (handle or "").strip()
@@ -298,7 +298,7 @@ def compose_cinematic_news_slide(
                 sb = draw.textbbox((0, 0), "Hg", font=sub_font)
                 y += sb[3] - sb[1] + 6
 
-    if logo_path:
+    if logo_path and not logo_in_band:
         _paste_asset_contain(img, logo_path, (36, 28, 36 + 200, 28 + 52))
 
     return img
@@ -318,6 +318,7 @@ def compose_cinematic_blueprint_slide(
     band_start_frac: float = 0.60,
     gradient_bridge_start: float = 0.42,
     slide_label: str = "",
+    logo_in_band: bool = True,
 ) -> Image.Image:
     """
     Carousel tail: simpler “slate” — one headline block + short supporting lines (one idea per slide).
@@ -328,18 +329,29 @@ def compose_cinematic_blueprint_slide(
     img = _darken_gradient_overlay(img, gradient_bridge_start)
 
     band_y = int(h * band_start_frac)
-    draw0 = ImageDraw.Draw(img)
-    draw0.rectangle([0, band_y, w, h], fill=(0, 0, 0))
-    draw0.line([(48, band_y), (w - 48, band_y)], fill=accent_rgb, width=2)
+    img = _apply_frosted_band(img, band_y)
+    _draw_divider_with_logo(img, y=band_y + 16, accent_rgb=accent_rgb, logo_path=(logo_path if logo_in_band else ""))
 
     draw = ImageDraw.Draw(img)
     margin = 48
     max_tw = w - 2 * margin
-    y = band_y + 28
+    y = band_y + 46
 
-    if (slide_label or "").strip():
+    slide_label_s = (slide_label or "").strip()
+    slide_counter = ""
+    if slide_label_s:
+        # Accept either "2/4" or "ARXIV INTEL · 2/4" etc.
+        cand = slide_label_s.split("·")[-1].strip()
+        if "/" in cand:
+            slide_counter = cand
+
+    if slide_counter:
         lf = _pick_font(font_body_candidates, 22)
-        lab = (slide_label or "").strip().upper()
+        bbox = draw.textbbox((0, 0), slide_counter, font=lf)
+        draw.text((w - margin - (bbox[2] - bbox[0]), band_y + 34), slide_counter, font=lf, fill=(140, 150, 170))
+    if slide_label_s and not (logo_in_band and (logo_path or "").strip()):
+        lf = _pick_font(font_body_candidates, 22)
+        lab = slide_label_s.upper()
         bbox = draw.textbbox((0, 0), lab, font=lf)
         lx = max(margin, (w - (bbox[2] - bbox[0])) // 2)
         draw.text((lx, y), lab, font=lf, fill=(120, 130, 150))
@@ -386,7 +398,7 @@ def compose_cinematic_blueprint_slide(
         if y > h - 36:
             break
 
-    if logo_path:
+    if logo_path and not logo_in_band:
         _paste_asset_contain(img, logo_path, (36, 28, 36 + 200, 28 + 52))
 
     return img
@@ -420,6 +432,76 @@ def _darken_gradient_overlay(base: Image.Image, start_frac: float) -> Image.Imag
     return Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
 
 
+def _apply_frosted_band(base: Image.Image, band_y: int) -> Image.Image:
+    """
+    Replace the harsh black dock with a blurred continuation of the image.
+    This keeps the photo/scene feeling continuous while still supporting legible type.
+    """
+    img = base.convert("RGB")
+    w, h = img.size
+    y0 = max(0, min(h, int(band_y)))
+    if y0 >= h:
+        return img
+
+    band = img.crop((0, y0, w, h)).filter(ImageFilter.GaussianBlur(radius=18))
+    # Slight dark tint + subtle vignette for readability.
+    tint = Image.new("RGBA", (w, h - y0), (0, 0, 0, 130))
+    band_rgba = Image.alpha_composite(band.convert("RGBA"), tint)
+
+    # Fade-in from top edge so it blends into the scene.
+    fade = Image.new("L", (1, h - y0), 0)
+    fp = fade.load()
+    for y in range(h - y0):
+        t = y / max((h - y0 - 1), 1)
+        fp[0, y] = int(255 * min(1.0, max(0.0, (t**0.85))))
+    fade = fade.resize((w, h - y0), Image.Resampling.LANCZOS)
+
+    out = img.convert("RGBA")
+    layer = band_rgba.copy()
+    layer.putalpha(fade)
+    out.paste(layer, (0, y0), layer)
+    return out.convert("RGB")
+
+
+def _draw_divider_with_logo(canvas: Image.Image, *, y: int, accent_rgb: Tuple[int, int, int], logo_path: str = "") -> None:
+    """
+    Draw a thin divider line across the slide, optionally with a centered logo "breaking" the line.
+    This matches the reference style: the logo feels embedded, not pasted above content.
+    """
+    img = canvas
+    w, h = img.size
+    yy = max(0, min(h - 1, int(y)))
+    margin = 64
+    gap = 150  # default logo gap
+
+    if (logo_path or "").strip():
+        # Reserve a gap for the logo, add a subtle "chip" behind, then paste the mark.
+        box = (w // 2 - 98, yy - 28, w // 2 + 98, yy + 40)
+        gap = (box[2] - box[0]) + 26
+        chip = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        cd = ImageDraw.Draw(chip)
+        if hasattr(cd, "rounded_rectangle"):
+            cd.rounded_rectangle(
+                [box[0] - 14, box[1] - 10, box[2] + 14, box[3] + 10],
+                radius=22,
+                fill=(0, 0, 0, 85),
+            )
+        else:
+            cd.rectangle([box[0] - 14, box[1] - 10, box[2] + 14, box[3] + 10], fill=(0, 0, 0, 85))
+        chip = chip.filter(ImageFilter.GaussianBlur(radius=2))
+        canvas_rgba = Image.alpha_composite(img.convert("RGBA"), chip)
+        img.paste(canvas_rgba.convert("RGB"))
+        _paste_asset_contain(img, logo_path, box)
+
+    draw = ImageDraw.Draw(img)
+    mid_x = w // 2
+    left_end = max(margin, mid_x - gap // 2)
+    right_start = min(w - margin, mid_x + gap // 2)
+    line_col = _blend_rgb(accent_rgb, (251, 191, 36), 0.22)
+    draw.line([(margin, yy), (left_end, yy)], fill=line_col, width=2)
+    draw.line([(right_start, yy), (w - margin, yy)], fill=line_col, width=2)
+
+
 def _auto_transparent_asset(img: Image.Image, tol: int = 24) -> Image.Image:
     rgba = img.convert("RGBA")
     a = rgba.getchannel("A")
@@ -443,6 +525,33 @@ def _auto_transparent_asset(img: Image.Image, tol: int = 24) -> Image.Image:
     return rgba
 
 
+def _extract_profile_tree_mark(img: Image.Image) -> Image.Image:
+    """
+    Heuristic crop to the *tree mark only* from the provided profile logo renders.
+    We intentionally avoid the surrounding "ArXiv Intel" ring text by cropping to the
+    inner emblem area and applying a circular alpha mask.
+    """
+    rgba = img.convert("RGBA")
+    w, h = rgba.size
+    side = min(w, h)
+    # Crop to a centered square, then to an inner square to remove ring text.
+    cx, cy = w // 2, h // 2
+    half0 = side // 2
+    sq = rgba.crop((cx - half0, cy - half0, cx + half0, cy + half0))
+    iw, ih = sq.size
+    inner = int(min(iw, ih) * 0.64)
+    half1 = inner // 2
+    inner_sq = sq.crop((iw // 2 - half1, ih // 2 - half1, iw // 2 + half1, ih // 2 + half1))
+
+    # Circular mask so it reads as a clean "mark" on a divider.
+    mw, mh = inner_sq.size
+    mask = Image.new("L", (mw, mh), 0)
+    md = ImageDraw.Draw(mask)
+    md.ellipse([2, 2, mw - 3, mh - 3], fill=255)
+    inner_sq.putalpha(mask)
+    return inner_sq
+
+
 def _paste_asset_contain(canvas: Image.Image, asset_path: Optional[str], box: Tuple[int, int, int, int]) -> None:
     if not asset_path:
         return
@@ -453,6 +562,17 @@ def _paste_asset_contain(canvas: Image.Image, asset_path: Optional[str], box: Tu
         logo = _auto_transparent_asset(Image.open(p))
     except OSError:
         return
+
+    # If the asset is one of the generated profile images, crop to the inner tree mark
+    # unless it is already a transparent cutout we can use as-is.
+    bn = p.name.lower()
+    already_cutout = ("trans" in bn) and (logo.getchannel("A").getextrema()[0] < 250)
+    if (bn.startswith("ai_profile") and not already_cutout) or (os.getenv("PROFILE_LOGO_MODE") or "").strip().lower() in ("tree", "mark"):
+        try:
+            logo = _extract_profile_tree_mark(logo)
+        except Exception:
+            # Best-effort; if cropping fails, fall back to raw.
+            pass
     x1, y1, x2, y2 = box
     bw, bh = max(1, x2 - x1), max(1, y2 - y1)
     lw, lh = logo.size

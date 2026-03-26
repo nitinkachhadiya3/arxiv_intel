@@ -114,6 +114,10 @@ Composition (mandatory):
 - Keep the LOWER ~35–40% calmer (sky, floor, haze, bokeh, simple geometry) so text can be added later
 - Vertical portrait framing mindset (tall)
 
+Brand overlay note (important composition constraint):
+- A thin divider + small circular tree-logo mark will be composited near ~60–65% height, centered.
+- Keep the center region around that divider relatively uncluttered (avoid high-frequency detail there).
+
 ABSOLUTE RULES:
 - NO text, letters, numbers, logos, watermarks, captions, UI, or HUD in the image
 - NO photorealistic identifiable celebrities or politicians
@@ -473,10 +477,11 @@ def try_render_gemini_carousel(
                 handle=handle,
                 logo_path=logo_path,
                 sublines=sublines_list,
-                show_handle=True,
+                # Prefer the profile logo (if configured) over handle text.
+                show_handle=not bool(logo_path),
+                logo_in_band=True,
             )
         else:
-            label_slide = str(brand.get("slide_label", "ARXIV INTEL"))
             composed = compose_cinematic_blueprint_slide(
                 fitted,
                 headline=headline,
@@ -487,7 +492,8 @@ def try_render_gemini_carousel(
                 primary_rgb=primary,
                 accent_rgb=accent,
                 logo_path=logo_path,
-                slide_label=f"{label_slide} · {i}/{total}",
+                slide_label=f"{i}/{total}",
+                logo_in_band=True,
             )
 
         meta_path = meta_root / f"slide_{i:02d}_prompt.txt"
