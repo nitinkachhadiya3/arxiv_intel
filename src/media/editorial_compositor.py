@@ -379,12 +379,11 @@ def compose_cinematic_blueprint_slide(
         text = " ".join(str(raw or "").split()).strip()
         if not text:
             continue
-        prefixed = text
-        if prefixed.startswith("--"):
-            prefixed = prefixed[2:].lstrip()
-        if not prefixed.startswith(("•", "●")):
-            prefixed = f"• {prefixed.lstrip('-— ').strip()}"
-        for line_words in _wrap_words_to_width(draw, prefixed.split(), body_font, max_tw)[:2]:
+        clean = text
+        if clean.startswith("--"):
+            clean = clean[2:].lstrip()
+        clean = clean.lstrip("-—•● ").strip()
+        for line_words in _wrap_words_to_width(draw, clean.split(), body_font, max_tw)[:2]:
             y = _draw_centered_word_line(draw, y, line_words, body_font, w, muted, highlight_rgb)
             sb = draw.textbbox((0, 0), "Hg", font=body_font)
             y += sb[3] - sb[1] + 4

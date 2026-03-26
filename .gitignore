@@ -1,4 +1,4 @@
-/.DS_Store
+.DS_Store
 
 # Python
 __pycache__/
@@ -17,7 +17,6 @@ venv/
 # Generated artifacts
 output/
 data/
-product_images/
 src/output/
 
 # Logs

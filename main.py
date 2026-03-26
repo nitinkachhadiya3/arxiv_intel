@@ -16,6 +16,8 @@ from __future__ import annotations
 import importlib.abc
 import importlib.machinery
 import importlib.util
+from datetime import datetime, timezone
+import json
 import os
 import sys
 from pathlib import Path
@@ -92,8 +94,6 @@ def _cli(argv: list[str] | None = None) -> int:
     Minimal CLI wrapper to support publishing from the updated image pipeline.
     """
     import argparse
-    import json
-
     root = Path(__file__).resolve().parent
     try:
         from dotenv import load_dotenv
@@ -163,8 +163,47 @@ def _cli(argv: list[str] | None = None) -> int:
     if not post_candidates:
         raise FileNotFoundError(f"No post JSON files found in {posts_dir}")
 
+    # Local publish history used to prevent accidental duplicate topics.
+    history_path = root / "data" / "processed" / "published_posts.jsonl"
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _post_fingerprint(post_path: Path, post_data: dict) -> str:
+        rep = post_data.get("repeat_meta") or {}
+        fp = str(rep.get("topic_fingerprint") or "").strip()
+        if fp:
+            return fp
+        return str(post_data.get("topic") or post_path.stem).strip().lower()
+
+    def _load_seen_fingerprints() -> set[str]:
+        seen: set[str] = set()
+        if not history_path.is_file():
+            return seen
+        for line in history_path.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if not s:
+                continue
+            try:
+                row = json.loads(s)
+            except json.JSONDecodeError:
+                continue
+            fp = str(row.get("fingerprint") or "").strip()
+            if fp:
+                seen.add(fp)
+        return seen
+
     def _resolve_post_path(spec: str | None) -> Path:
         if spec is None or str(spec).strip() == "":
+            seen = _load_seen_fingerprints()
+            # Pick newest unseen post to avoid accidental duplicate publish.
+            for cand in reversed(post_candidates):
+                try:
+                    data = json.loads(cand.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                fp = _post_fingerprint(cand, data)
+                if fp and fp not in seen:
+                    return cand
+            # Fallback to latest if everything is seen; caller may block based on policy below.
             return post_candidates[-1]
         p = Path(spec)
         if p.is_file():
@@ -185,6 +224,15 @@ def _cli(argv: list[str] | None = None) -> int:
 
     post_path = _resolve_post_path(post_spec)
     post = json.loads(post_path.read_text(encoding="utf-8"))
+    post_fp = _post_fingerprint(post_path, post)
+
+    allow_repeat = (os.getenv("ALLOW_REPEAT_POST", "0") or "0").strip().lower() in ("1", "true", "yes")
+    seen_fps = _load_seen_fingerprints()
+    if args.post_instagram and post_fp in seen_fps and not allow_repeat:
+        raise RuntimeError(
+            f"Duplicate topic blocked for publish: {post_path.name}. "
+            "Set ALLOW_REPEAT_POST=1 only if you intentionally want to repost."
+        )
 
     slide_texts: list[str] = list(post.get("poster_headlines") or [])
     if not slide_texts:
@@ -240,6 +288,15 @@ def _cli(argv: list[str] | None = None) -> int:
     result = publisher.publish_carousel_from_paths([Path(p) for p in paths], caption=caption)
     # Print the main IDs so user can see what got published.
     media_id = result.get("instagram_media_id")
+    hist_row = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "media_id": media_id,
+        "post_json": str(post_path),
+        "fingerprint": post_fp,
+        "topic": str(post.get("topic") or ""),
+    }
+    with history_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(hist_row, ensure_ascii=False) + "\n")
     print(f"Published to Instagram. instagram_media_id={media_id}")
     return 0
 
