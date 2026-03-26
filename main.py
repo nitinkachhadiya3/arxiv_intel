@@ -104,6 +104,12 @@ def _cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--post-instagram", action="store_true", help="Generate and publish a carousel to Instagram")
     parser.add_argument(
+        "--post-json",
+        default=None,
+        metavar="POST_JSON",
+        help="Use a specific post JSON file (path or filename under output/posts/) instead of the newest one.",
+    )
+    parser.add_argument(
         "--render-post",
         nargs="?",
         const="",
@@ -147,7 +153,16 @@ def _cli(argv: list[str] | None = None) -> int:
             return alt
         raise FileNotFoundError(f"Post JSON not found: {spec}")
 
-    post_path = _resolve_post_path(None if args.post_instagram else args.render_post)
+    post_spec: str | None = args.post_json
+    if args.post_instagram:
+        # For publishing, --post-json selects the target; otherwise we default to newest.
+        post_spec = post_spec if post_spec and str(post_spec).strip() else None
+    else:
+        # For rendering, --render-post selects the target when provided.
+        if not (post_spec and str(post_spec).strip()):
+            post_spec = args.render_post
+
+    post_path = _resolve_post_path(post_spec)
     post = json.loads(post_path.read_text(encoding="utf-8"))
 
     slide_texts: list[str] = list(post.get("poster_headlines") or [])

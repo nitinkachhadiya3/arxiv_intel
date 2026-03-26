@@ -492,7 +492,7 @@ def try_render_gemini_carousel(
                 primary_rgb=primary,
                 accent_rgb=accent,
                 logo_path=logo_path,
-                slide_label=f"{i}/{total}",
+                slide_label="",
                 logo_in_band=True,
             )
 

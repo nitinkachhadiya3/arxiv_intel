@@ -338,17 +338,6 @@ def compose_cinematic_blueprint_slide(
     y = band_y + 46
 
     slide_label_s = (slide_label or "").strip()
-    slide_counter = ""
-    if slide_label_s:
-        # Accept either "2/4" or "ARXIV INTEL · 2/4" etc.
-        cand = slide_label_s.split("·")[-1].strip()
-        if "/" in cand:
-            slide_counter = cand
-
-    if slide_counter:
-        lf = _pick_font(font_body_candidates, 22)
-        bbox = draw.textbbox((0, 0), slide_counter, font=lf)
-        draw.text((w - margin - (bbox[2] - bbox[0]), band_y + 34), slide_counter, font=lf, fill=(140, 150, 170))
     if slide_label_s and not (logo_in_band and (logo_path or "").strip()):
         lf = _pick_font(font_body_candidates, 22)
         lab = slide_label_s.upper()
@@ -390,7 +379,11 @@ def compose_cinematic_blueprint_slide(
         text = " ".join(str(raw or "").split()).strip()
         if not text:
             continue
-        prefixed = text if text.startswith(("►", "▸", "—", "-", "•")) else f"— {text}"
+        prefixed = text
+        if prefixed.startswith("--"):
+            prefixed = prefixed[2:].lstrip()
+        if not prefixed.startswith(("•", "●")):
+            prefixed = f"• {prefixed.lstrip('-— ').strip()}"
         for line_words in _wrap_words_to_width(draw, prefixed.split(), body_font, max_tw)[:2]:
             y = _draw_centered_word_line(draw, y, line_words, body_font, w, muted, highlight_rgb)
             sb = draw.textbbox((0, 0), "Hg", font=body_font)
@@ -475,23 +468,10 @@ def _draw_divider_with_logo(canvas: Image.Image, *, y: int, accent_rgb: Tuple[in
     gap = 150  # default logo gap
 
     if (logo_path or "").strip():
-        # Reserve a gap for the logo, add a subtle "chip" behind, then paste the mark.
+        # Reserve a gap for the logo and paste the mark directly (no black chip box).
         box = (w // 2 - 98, yy - 28, w // 2 + 98, yy + 40)
-        gap = (box[2] - box[0]) + 26
-        chip = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        cd = ImageDraw.Draw(chip)
-        if hasattr(cd, "rounded_rectangle"):
-            cd.rounded_rectangle(
-                [box[0] - 14, box[1] - 10, box[2] + 14, box[3] + 10],
-                radius=22,
-                fill=(0, 0, 0, 85),
-            )
-        else:
-            cd.rectangle([box[0] - 14, box[1] - 10, box[2] + 14, box[3] + 10], fill=(0, 0, 0, 85))
-        chip = chip.filter(ImageFilter.GaussianBlur(radius=2))
-        canvas_rgba = Image.alpha_composite(img.convert("RGBA"), chip)
-        img.paste(canvas_rgba.convert("RGB"))
-        _paste_asset_contain(img, logo_path, box)
+        # Keep a small gap so the divider feels embedded under the logo.
+        gap = (box[2] - box[0]) + 12
 
     draw = ImageDraw.Draw(img)
     mid_x = w // 2
@@ -500,6 +480,10 @@ def _draw_divider_with_logo(canvas: Image.Image, *, y: int, accent_rgb: Tuple[in
     line_col = _blend_rgb(accent_rgb, (251, 191, 36), 0.22)
     draw.line([(margin, yy), (left_end, yy)], fill=line_col, width=2)
     draw.line([(right_start, yy), (w - margin, yy)], fill=line_col, width=2)
+
+    # Paste logo after drawing the divider so the logo covers the line where it exists.
+    if (logo_path or "").strip():
+        _paste_asset_contain(img, logo_path, box)
 
 
 def _auto_transparent_asset(img: Image.Image, tol: int = 24) -> Image.Image:
