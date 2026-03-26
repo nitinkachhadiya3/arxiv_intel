@@ -104,6 +104,11 @@ def _cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--post-instagram", action="store_true", help="Generate and publish a carousel to Instagram")
     parser.add_argument(
+        "--run-scheduler",
+        action="store_true",
+        help="Run the configured scheduler loop (ingestion + pipeline jobs).",
+    )
+    parser.add_argument(
         "--post-json",
         default=None,
         metavar="POST_JSON",
@@ -126,6 +131,13 @@ def _cli(argv: list[str] | None = None) -> int:
 
     if args.use_pyc_bootstrap:
         return _run_main_pyc()
+
+    if args.run_scheduler:
+        from src.scheduler.scheduler import JobScheduler
+
+        cfg = get_config()
+        JobScheduler(cfg).run_forever()
+        return 0
 
     if not args.post_instagram and args.render_post is None:
         parser.print_help()

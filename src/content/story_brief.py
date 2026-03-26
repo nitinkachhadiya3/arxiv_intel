@@ -28,7 +28,15 @@ def story_strategist_enabled() -> bool:
     return _STRATEGIST
 
 
-_STORY_SYSTEM = """You are the editorial strategist for "ArXiv Intel", a premium tech-intelligence Instagram brand.
+def _brand_context() -> tuple[str, str]:
+    brand = (os.getenv("BRAND_NAME") or "ArXiv Intel").strip() or "ArXiv Intel"
+    category = (os.getenv("CONTENT_CATEGORY") or "technology").strip() or "technology"
+    return brand, category
+
+
+def _story_system_prompt() -> str:
+    brand, category = _brand_context()
+    return f"""You are the editorial strategist for "{brand}", a premium {category}-news Instagram brand.
 
 Return ONLY valid JSON (no markdown) with this shape:
 {
@@ -143,7 +151,7 @@ Produce the JSON brief. Enforce slide_plan length <= {_MAX_SLIDES}."""
 
     client = genai.Client(api_key=api)
     models = gemini_model_candidates(getattr(cfg, "gemini_model", None))
-    combined = f"{_STORY_SYSTEM}\n\n{user}"
+    combined = f"{_story_system_prompt()}\n\n{user}"
     last_err: Optional[BaseException] = None
     text_out = ""
     for mid in models:

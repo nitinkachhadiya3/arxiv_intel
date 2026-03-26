@@ -97,8 +97,11 @@ def build_cinematic_background_prompt(
     role = (slide_role or "Slide").strip()
     hint_block = f"Scene direction: {hint}\n" if hint else ""
 
+    brand = (os.getenv("BRAND_NAME") or "ArXiv Intel").strip() or "ArXiv Intel"
+    category = (os.getenv("CONTENT_CATEGORY") or "technology").strip() or "technology"
+
     return f"""
-You are generating a single still image for a premium tech-news Instagram post (brand: ArXiv Intel).
+You are generating a single still image for a premium {category}-news Instagram post (brand: {brand}).
 
 Story context (for you only — DO NOT render as text): {topic}
 Slide {slide_index} of {total_slides}. Narrative role: {role}.
