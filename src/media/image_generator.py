@@ -81,6 +81,7 @@ class CarouselImageGenerator:
         story_post: Dict[str, Any] | None = None,
     ) -> List[Path]:
         cfg = get_config()
+        strict_gemini_publish = (os.getenv("REQUIRE_GEMINI_FOR_PUBLISH", "1") or "1").strip().lower() not in ("0", "false", "no")
         slides = list(overlay_texts if overlay_texts is not None else slide_texts)
         if not slides:
             return []
@@ -108,8 +109,12 @@ class CarouselImageGenerator:
                 )
                 if paths:
                     return [Path(p) for p in paths]
+                if strict_gemini_publish:
+                    raise RuntimeError("Gemini carousel returned no slides; strict publish mode blocks Pillow fallback.")
             except Exception:
-                # Fall back to Pillow for resilience; we'll still pass the pipeline.
+                if strict_gemini_publish:
+                    raise
+                # Fall back to Pillow for resilience when strict mode is disabled.
                 pass
 
         # Fallback path (Pillow): abstract background + editorial compositor overlays.

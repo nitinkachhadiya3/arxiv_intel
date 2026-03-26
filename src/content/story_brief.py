@@ -36,35 +36,34 @@ def _brand_context() -> tuple[str, str]:
 
 def _story_system_prompt() -> str:
     brand, category = _brand_context()
-    return f"""You are the editorial strategist for "{brand}", a premium {category}-news Instagram brand.
-
-Return ONLY valid JSON (no markdown) with this shape:
-{
-  "content_type": "single" | "carousel",
-  "reason": "one sentence",
-  "content_depth": "low" | "medium" | "high",
-  "audience_angle": "curiosity" | "opportunity" | "risk" | "policy",
-  "primary_claim": "one factual sentence, no hype",
-  "hook_candidates": ["4-5 short option strings"],
-  "hook_selected": "best hook from candidates; punchy, credible, max ~12 words",
-  "all_in_one_datapoint_1": "► Short supporting fact 1 (max ~55 chars)",
-  "all_in_one_datapoint_2": "► Short supporting fact 2 (max ~55 chars)",
-  "slide_plan": [
-    {
-      "role": "hook | context | insight | data | outlook | cta",
-      "headline": "ALL CAPS one line for overlay, max ~90 chars",
-      "one_idea": "internal note, one sentence",
-      "visual_hint": "for image model: symbolic cinematic scene, NO text, NO logos, NO real-person faces, NO fake disasters"
-    }
-  ]
-}
-
-Rules:
-- If ONE core fact or simple update → content_type "single", slide_plan length 1. Still fill datapoint_1 and datapoint_2 from the story.
-- If multi-beat explainer (3+ distinct ideas) → "carousel", slide_plan 4-6 slides max. Slide 1 MUST work alone: headline + two datapoints already chosen; slide_plan[0].headline should match hook_selected tone.
-- Slide 2+ headline is ONE idea each, short ALL CAPS fragments (not paragraphs).
-- Never invent events or casualties. No clickbait lies. Hooks can be curiosity but must be defensible from the sources.
-"""
+    return (
+        f'You are the editorial strategist for "{brand}", a premium {category}-news Instagram brand.\n\n'
+        "Return ONLY valid JSON (no markdown) with this shape:\n"
+        "{\n"
+        '  "content_type": "single" | "carousel",\n'
+        '  "reason": "one sentence",\n'
+        '  "content_depth": "low" | "medium" | "high",\n'
+        '  "audience_angle": "curiosity" | "opportunity" | "risk" | "policy",\n'
+        '  "primary_claim": "one factual sentence, no hype",\n'
+        '  "hook_candidates": ["4-5 short option strings"],\n'
+        '  "hook_selected": "best hook from candidates; punchy, credible, max ~12 words",\n'
+        '  "all_in_one_datapoint_1": "► Short supporting fact 1 (max ~55 chars)",\n'
+        '  "all_in_one_datapoint_2": "► Short supporting fact 2 (max ~55 chars)",\n'
+        '  "slide_plan": [\n'
+        "    {\n"
+        '      "role": "hook | context | insight | data | outlook | cta",\n'
+        '      "headline": "ALL CAPS one line for overlay, max ~90 chars",\n'
+        '      "one_idea": "internal note, one sentence",\n'
+        '      "visual_hint": "for image model: symbolic cinematic scene, NO text, NO logos, NO real-person faces, NO fake disasters"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "Rules:\n"
+        '- If ONE core fact or simple update → content_type "single", slide_plan length 1. Still fill datapoint_1 and datapoint_2 from the story.\n'
+        '- If multi-beat explainer (3+ distinct ideas) → "carousel", slide_plan 4-6 slides max. Slide 1 MUST work alone: headline + two datapoints already chosen; slide_plan[0].headline should match hook_selected tone.\n'
+        '- Slide 2+ headline is ONE idea each, short ALL CAPS fragments (not paragraphs).\n'
+        "- Never invent events or casualties. No clickbait lies. Hooks can be curiosity but must be defensible from the sources.\n"
+    )
 
 
 def _extract_json_object(text: str) -> Optional[dict]:

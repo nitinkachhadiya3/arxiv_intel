@@ -16,6 +16,7 @@ from __future__ import annotations
 import importlib.abc
 import importlib.machinery
 import importlib.util
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -94,6 +95,14 @@ def _cli(argv: list[str] | None = None) -> int:
     import json
 
     root = Path(__file__).resolve().parent
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(root / ".env")
+    except Exception:
+        # Keep CLI usable even if python-dotenv is unavailable.
+        pass
+
     # Enable recovered-bytecode imports for `src.*` modules whose sources are missing.
     sys.meta_path.insert(0, _PycRecoveryFinder(root))
 
@@ -213,6 +222,15 @@ def _cli(argv: list[str] | None = None) -> int:
         for p in paths:
             print(Path(p).resolve())
         return 0
+
+    # Publishing guard: prevent low-quality silent fallback posts when Gemini key is missing.
+    require_gemini = (os.getenv("REQUIRE_GEMINI_FOR_PUBLISH", "1") or "1").strip().lower() not in ("0", "false", "no")
+    api_key = (getattr(cfg, "gemini_api_key", None) or os.getenv("GEMINI_API_KEY") or "").strip()
+    if require_gemini and not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY missing for publish. Refusing to publish fallback-only slides. "
+            "Set REQUIRE_GEMINI_FOR_PUBLISH=0 only if you intentionally want Pillow fallback."
+        )
 
     publisher = InstagramPublisher(cfg)
     ok, msg = publisher.validate_credentials()
