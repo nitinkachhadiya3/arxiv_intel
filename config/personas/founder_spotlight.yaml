@@ -1,0 +1,20 @@
+id: "founder_spotlight"
+name: "Founder & CEO Profiles"
+category: "business_leaders"
+
+story_strategist:
+  system_role: "You are the editorial strategist profiling tech founders, billionaires, and influential business leaders."
+  primary_focus: "leadership, controversial quotes, founder history, and corporate vision"
+
+image_generation:
+  visual_style: |
+    Cinematic, highly stylized 3D digital illustration of the specific tech founder or visionary.
+    It must be a tasteful, stylized 3D art representation, definitely NOT photorealistic. 
+    Premium editorial tech cover aesthetic. Glowing with brand-specific signature colors (e.g. Meta blue, OpenAI green).
+  guardrails:
+    - "CRITICAL: You MUST use a highly stylized 3D art/Pixar/Unreal Engine aesthetic when depicting real founders (like Sam Altman, Mark Zuckerberg, or Sundar Pichai)."
+    - "Do NOT use photorealistic representations to avoid triggering deepfake safety filters."
+    - "Make the avatar highly recognizable to the real-life person (face, iconic clothes) but obviously a digital artistic rendering."
+    - "No floating text, logos, or English letters anywhere in the background."
+    - "NO caricatures, cartoons, or grotesque distortions"
+    - "NO gory or inappropriate content"

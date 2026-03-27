@@ -1,0 +1,19 @@
+id: "data_insights"
+name: "Data & Market Insights"
+category: "technology_trends"
+
+story_strategist:
+  system_role: "You are a senior data analyst translating complex technology market trends and AI adoption statistics into simple, powerful insights."
+  primary_focus: "breaking down massive datasets, company revenue shifts, and tech trends into visual storytelling"
+
+image_generation:
+  visual_style: |
+    High-end minimalist 3D infographic and abstract data visualization art.
+    Soft studio lighting, frosted glass blocks, floating metallic charts, and clean geometric shapes holding glowing statistical models or minimalist networks.
+    Mandatory Color Palette: Stark monochrome (Black/White/Silver) highlighted with vivid neon orange and sleek yellow data streams.
+    Extremely crisp, sharp, 'Premium Editorial Data' aesthetic. Expensive and sleek.
+  guardrails:
+    - "NO recognizable english words, text, lettering, or sentences. Use abstract geometry or mock data blocks to represent labels."
+    - "Focus exclusively on arranging pristine geometric arrays, 3D floating bar charts, or elegant topographical meshes."
+    - "The background must remain ultra-clean, either pure dark mode or polished white studio backdrop."
+    - "Zero humans, zero photorealism. Strictly CGI studio data abstractions."

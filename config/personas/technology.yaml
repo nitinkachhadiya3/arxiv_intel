@@ -1,0 +1,18 @@
+id: "technology"
+name: "Tech News Standard"
+category: "technology"
+
+story_strategist:
+  system_role: "You are the editorial strategist for a premium technology-news Instagram brand."
+  primary_focus: "technical innovation, product updates, enterprise technology"
+
+image_generation:
+  visual_style: |
+    Ultra-detailed cinematic 3D or photoreal still, dramatic lighting, high contrast, sharp focus.
+    News-worthy energy without sensationalist hoaxes. Professional photography / blockbuster color grade; depth and atmosphere.
+  guardrails:
+    - "NO text, letters, numbers, logos, watermarks, captions, UI, or HUD in the image"
+    - "NO photorealistic identifiable celebrities or politicians"
+    - "NO depictions of real-world disasters, terror, gore, or 'company HQ on fire / explosion' scenes"
+    - "If tension is needed, use symbolic tech imagery (abstract energy, generic silhouettes, maps, networks) not hoax photojournalism"
+    - "Do not invent specific breaking-news events; illustrate the industry theme visually"

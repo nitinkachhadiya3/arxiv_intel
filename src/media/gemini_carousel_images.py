@@ -32,6 +32,7 @@ from src.media.image_generator import save_rgb_jpeg_under_limit
 from src.utils.config import AppConfig
 from src.utils.gemini_models import gemini_image_model_candidates, is_gemini_model_unavailable_error
 from src.utils.logger import get_logger, log_stage
+from src.content.persona_loader import load_persona
 
 _LOG = get_logger("media.gemini_carousel")
 
@@ -87,10 +88,11 @@ def build_cinematic_background_prompt(
     semantic_visual_hint: str,
     slide_index: int,
     total_slides: int,
+    persona: dict = None,
 ) -> str:
     """
     Image-only prompt: dramatic cinematic scene, room for PIL headline band below.
-    Ethical guardrails: no fake disasters, no real logos, no on-image text.
+    Ethical guardrails are dynamically loaded from the persona configuration.
     """
     topic = _normalize_headline(topic_title or "technology", 200)
     hint = (semantic_visual_hint or "").strip()[:500]
@@ -100,17 +102,27 @@ def build_cinematic_background_prompt(
     brand = (os.getenv("BRAND_NAME") or "ArXiv Intel").strip() or "ArXiv Intel"
     category = (os.getenv("CONTENT_CATEGORY") or "technology").strip() or "technology"
 
+    visual_style = ""
+    guardrails_text = ""
+    if persona and "image_generation" in persona:
+        visual_style = persona["image_generation"].get("visual_style", "")
+        guardrails_list = persona["image_generation"].get("guardrails", [])
+        if guardrails_list:
+            guardrails_text = "\n".join(f"- {g}" for g in guardrails_list)
+
+    if not visual_style:
+        visual_style = "- Ultra-detailed cinematic 3D or photoreal still, dramatic lighting, high contrast, sharp focus\n- Professional photography / blockbuster color grade"
+    if not guardrails_text:
+        guardrails_text = "- NO text, letters, numbers, logos, watermarks, captions, UI, or HUD in the image\n- NO photorealistic identifiable celebrities or politicians"
+
     return f"""
 You are generating a single still image for a premium {category}-news Instagram post (brand: {brand}).
 
 Story context (for you only — DO NOT render as text): {topic}
 Slide {slide_index} of {total_slides}. Narrative role: {role}.
 {hint_block}
-
 Visual style:
-- Ultra-detailed cinematic 3D or photoreal still, dramatic lighting, high contrast, sharp focus
-- News-worthy energy without sensationalist hoaxes
-- Professional photography / blockbuster color grade; depth and atmosphere
+{visual_style}
 
 Composition (mandatory):
 - Place the main subject and action in the UPPER ~60% of the frame (rule of thirds / centered hero)
@@ -122,11 +134,7 @@ Brand overlay note (important composition constraint):
 - Keep the center region around that divider relatively uncluttered (avoid high-frequency detail there).
 
 ABSOLUTE RULES:
-- NO text, letters, numbers, logos, watermarks, captions, UI, or HUD in the image
-- NO photorealistic identifiable celebrities or politicians
-- NO depictions of real-world disasters, terror, gore, or “company HQ on fire / explosion” scenes
-- If tension is needed, use symbolic tech imagery (abstract energy, generic silhouettes, maps, networks) not hoax photojournalism
-- Do not invent specific breaking-news events; illustrate the industry theme visually
+{guardrails_text}
 
 Output: one high-end editorial still, no border, no lettering.
 """.strip()
@@ -414,12 +422,14 @@ def try_render_gemini_carousel(
                 is_last_slide=(i == total),
             )
         else:
+            persona = load_persona()
             prompt = build_cinematic_background_prompt(
                 topic_title=topic_title or headline or slug.replace("_", " "),
                 slide_role=role,
                 semantic_visual_hint=hint,
                 slide_index=i,
                 total_slides=total,
+                persona=persona,
             )
 
         raw: Optional[Image.Image] = None

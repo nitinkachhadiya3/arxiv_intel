@@ -1,0 +1,22 @@
+id: "ai_tutorial"
+name: "AI Step-by-Step Tutorial"
+category: "technology_tools"
+
+story_strategist:
+  system_role: "You are a master AI tools instructor focusing on practical software steps and tool workflows."
+  primary_focus: "step-by-step instructions on how to use new AI features, software workflows, or creative tools"
+
+image_generation:
+  visual_style: |
+    Futuristic UI abstraction for an AI step-by-step tutorial. Sharp layout, beautiful cyan and purple color gradients, dark tech interfaces.
+    Clean software abstractions, glassmorphism UI overlapping application windows, glossy neon nodes. No text content, strictly visual metaphors for the steps.
+  guardrails:
+    - "NO recognizable english text, letters, watermarks, captions, or readable UI menus in the image"
+    - "Focus on stacked UI cards or floating data nodes representing 'Steps 1 2 3'"
+    - "Keep the background sleek, dark mode, or frosted glass aesthetic"
+
+# The story strategist will strictly enforce this for AI tutorials
+carousel_rules:
+  - "Slide 1 is the hook (e.g. 'HOW TO MASTER XYZ IN 3 STEPS')."
+  - "Slide 2+ MUST be step-by-step practical instructions (e.g., Slide 2: 'STEP 1: OPEN X', Slide 3: 'STEP 2: UPLOAD Y')."
+  - "Keep the language extremely practical and action-oriented."

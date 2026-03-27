@@ -17,6 +17,7 @@ from google.genai import types
 from src.utils.config import AppConfig
 from src.utils.gemini_models import gemini_model_candidates, is_gemini_model_unavailable_error
 from src.utils.logger import get_logger, log_stage
+from src.content.persona_loader import load_persona
 
 _LOG = get_logger("content.story_brief")
 
@@ -34,10 +35,24 @@ def _brand_context() -> tuple[str, str]:
     return brand, category
 
 
-def _story_system_prompt() -> str:
+def _story_system_prompt(persona: dict = None) -> str:
     brand, category = _brand_context()
+    
+    custom_rules = ""
+    if persona:
+        if "carousel_rules" in persona:
+            custom_rules = "\n".join(f"- CUSTOM RULE: {r}" for r in persona["carousel_rules"]) + "\n"
+        if "story_strategist" in persona:
+            sys_role = persona["story_strategist"].get("system_role", f"You are the editorial strategist for a premium {category}-news Instagram brand.")
+            primary_focus = persona["story_strategist"].get("primary_focus", "")
+            role_block = f'{sys_role} Brand name: "{brand}".\nPrimary focus: {primary_focus}\n\n'
+        else:
+            role_block = f'You are the editorial strategist for "{brand}", a premium {category}-news Instagram brand.\n\n'
+    else:
+        role_block = f'You are the editorial strategist for "{brand}", a premium {category}-news Instagram brand.\n\n'
+
     return (
-        f'You are the editorial strategist for "{brand}", a premium {category}-news Instagram brand.\n\n'
+        f'{role_block}'
         "Return ONLY valid JSON (no markdown) with this shape:\n"
         "{\n"
         '  "content_type": "single" | "carousel",\n'
@@ -54,11 +69,12 @@ def _story_system_prompt() -> str:
         '      "role": "hook | context | insight | data | outlook | cta",\n'
         '      "headline": "ALL CAPS one line for overlay, max ~90 chars",\n'
         '      "one_idea": "internal note, one sentence",\n'
-        '      "visual_hint": "for image model: symbolic cinematic scene, NO text, NO logos, NO real-person faces, NO fake disasters"\n'
+        '      "visual_hint": "for image model: vivid scene description based on the style, NO text in image"\n'
         "    }\n"
         "  ]\n"
         "}\n\n"
         "Rules:\n"
+        f"{custom_rules}"
         '- If ONE core fact or simple update → content_type "single", slide_plan length 1. Still fill datapoint_1 and datapoint_2 from the story.\n'
         '- If multi-beat explainer (3+ distinct ideas) → "carousel", slide_plan 4-6 slides max. Slide 1 MUST work alone: headline + two datapoints already chosen; slide_plan[0].headline should match hook_selected tone.\n'
         '- Slide 2+ headline is ONE idea each, short ALL CAPS fragments (not paragraphs).\n'
@@ -150,7 +166,8 @@ Produce the JSON brief. Enforce slide_plan length <= {_MAX_SLIDES}."""
 
     client = genai.Client(api_key=api)
     models = gemini_model_candidates(getattr(cfg, "gemini_model", None))
-    combined = f"{_story_system_prompt()}\n\n{user}"
+    persona = load_persona()
+    combined = f"{_story_system_prompt(persona)}\n\n{user}"
     last_err: Optional[BaseException] = None
     text_out = ""
     for mid in models:

@@ -1,0 +1,18 @@
+id: "global_affairs"
+name: "Global Affairs & Tech"
+category: "geopolitics"
+
+story_strategist:
+  system_role: "You are the editorial strategist covering geopolitical events, defense tech, and global economic shifts."
+  primary_focus: "the intersection of technology and war, supply chains, tariffs, and smart city infrastructure"
+
+image_generation:
+  visual_style: |
+    Cinematic photojournalism, minimalist maps, and vast environmental storytelling. Epic aerial shots, abstract threat networks,
+    or dramatic cityscape overviews at blue hour or twilight. High contrast, gritty yet premium tone.
+    Mandatory Color Palette: Deep charcoal, muted crimson red, and bright amber accents. Stark contrast.
+  guardrails:
+    - "NO recognizable english text, letters, numbers, logos, watermarks, captions, UI, or HUD in the image"
+    - "NO graphic violence, real-world gore, or offensive casualties."
+    - "Focus on abstract military technology, radar maps, global supply chains, or dramatic architectural scale."
+    - "Avoid specific named politicians unless central to a tech narrative, render them as serious and neutral."
