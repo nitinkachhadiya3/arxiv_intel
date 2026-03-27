@@ -16,3 +16,20 @@ image_generation:
     - "NO depictions of real-world disasters, terror, gore, or 'company HQ on fire / explosion' scenes"
     - "If tension is needed, use symbolic tech imagery (abstract energy, generic silhouettes, maps, networks) not hoax photojournalism"
     - "Do not invent specific breaking-news events; illustrate the industry theme visually"
+
+content_type_styles:
+  founder:
+    color_palette: "warm amber, soft gold, neutral earth tones, muted backgrounds"
+    mood: "aspirational, human, editorial warmth"
+  product:
+    color_palette: "electric blue, deep purple, neon cyan, dark environments"
+    mood: "futuristic, innovative, premium product showcase"
+  infrastructure:
+    color_palette: "steel grey, industrial blue, dark moody, subtle green accents"
+    mood: "powerful, industrial precision, architectural scale"
+  news:
+    color_palette: "orange-red accents, neutral greys, documentary authenticity"
+    mood: "urgent, credible, real-world journalism"
+  insight:
+    color_palette: "soft pastels, light gradients, minimal whites, clean geometry"
+    mood: "analytical, clean, data-driven clarity"

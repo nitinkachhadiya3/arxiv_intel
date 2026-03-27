@@ -35,17 +35,8 @@ def load_persona(persona_id: str = "") -> dict:
         if env_cat:
             persona_id = env_cat
         else:
-            rotation_idx = total_posts % 5
-            if rotation_idx == 0:
-                persona_id = "technology"          # Standard tech news (Blue/Cyan 3D)
-            elif rotation_idx == 1:
-                persona_id = "founder_spotlight"   # Human/Visionary (Stylized portrait)
-            elif rotation_idx == 2:
-                persona_id = "ai_tutorial"         # Teaching (Glassmorphism UI)
-            elif rotation_idx == 3:
-                persona_id = "global_affairs"      # World news / Policy (Geopolitical/Map UI)
-            else:
-                persona_id = "data_insights"       # Infographic/Charts (Data Viz, Minimalist)
+            # Locked to technology as per user request
+            persona_id = "technology"
 
     persona_dir = root / "config" / "personas"
     target_path = persona_dir / f"{persona_id}.yaml"

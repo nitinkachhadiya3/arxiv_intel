@@ -243,6 +243,8 @@ def compose_cinematic_news_slide(
 
     band_y = int(h * band_start_frac)
     img = _apply_frosted_band(img, band_y)
+    
+    # Restore the divider branding (horizontal lines + centered logo)
     _draw_divider_with_logo(img, y=band_y + 18, accent_rgb=accent_rgb, logo_path=(logo_path if logo_in_band else ""))
 
     draw = ImageDraw.Draw(img)
@@ -417,6 +419,8 @@ def _darken_gradient_overlay(base: Image.Image, start_frac: float) -> Image.Imag
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     od = ImageDraw.Draw(overlay)
     y0 = int(h * start_frac)
+    # Start gradient slightly higher for better readability breathing room
+    y0 = max(0, y0 - int(h * 0.05))
     for y in range(y0, h):
         t = (y - y0) / max(h - y0, 1)
         a = int(220 * min(1.0, t**1.15))
@@ -436,8 +440,8 @@ def _apply_frosted_band(base: Image.Image, band_y: int) -> Image.Image:
         return img
 
     band = img.crop((0, y0, w, h)).filter(ImageFilter.GaussianBlur(radius=18))
-    # Slight dark tint + subtle vignette for readability.
-    tint = Image.new("RGBA", (w, h - y0), (0, 0, 0, 130))
+    # Increased tint opacity from 130 -> 160 for improved text readability
+    tint = Image.new("RGBA", (w, h - y0), (0, 0, 0, 160))
     band_rgba = Image.alpha_composite(band.convert("RGBA"), tint)
 
     # Fade-in from top edge so it blends into the scene.

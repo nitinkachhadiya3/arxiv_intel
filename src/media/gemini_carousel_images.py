@@ -33,6 +33,11 @@ from src.utils.config import AppConfig
 from src.utils.gemini_models import gemini_image_model_candidates, is_gemini_model_unavailable_error
 from src.utils.logger import get_logger, log_stage
 from src.content.persona_loader import load_persona
+from src.media.visual_diversity import (
+    build_diverse_prompt,
+    classify_content_type,
+    deduplicate_against_history,
+)
 
 _LOG = get_logger("media.gemini_carousel")
 
@@ -89,54 +94,37 @@ def build_cinematic_background_prompt(
     slide_index: int,
     total_slides: int,
     persona: dict = None,
+    content_visual_type: str = "news",
 ) -> str:
     """
     Image-only prompt: dramatic cinematic scene, room for PIL headline band below.
+    Now uses the visual diversity engine for per-type, per-slide prompt variation.
     Ethical guardrails are dynamically loaded from the persona configuration.
     """
     topic = _normalize_headline(topic_title or "technology", 200)
     hint = (semantic_visual_hint or "").strip()[:500]
-    role = (slide_role or "Slide").strip()
-    hint_block = f"Scene direction: {hint}\n" if hint else ""
 
-    brand = (os.getenv("BRAND_NAME") or "ArXiv Intel").strip() or "ArXiv Intel"
-    category = (os.getenv("CONTENT_CATEGORY") or "technology").strip() or "technology"
+    # Build the diverse, content-type-aware prompt
+    diverse_prompt = build_diverse_prompt(
+        content_type=content_visual_type,
+        topic=topic,
+        slide_index=slide_index,
+        total_slides=total_slides,
+        visual_hint=hint,
+    )
 
-    visual_style = ""
-    guardrails_text = ""
-    if persona and "image_generation" in persona:
-        visual_style = persona["image_generation"].get("visual_style", "")
-        guardrails_list = persona["image_generation"].get("guardrails", [])
-        if guardrails_list:
-            guardrails_text = "\n".join(f"- {g}" for g in guardrails_list)
-
-    if not visual_style:
-        visual_style = "- Ultra-detailed cinematic 3D or photoreal still, dramatic lighting, high contrast, sharp focus\n- Professional photography / blockbuster color grade"
-    if not guardrails_text:
-        guardrails_text = "- NO text, letters, numbers, logos, watermarks, captions, UI, or HUD in the image\n- NO photorealistic identifiable celebrities or politicians"
+    # Deduplicate against recent history
+    history_path = Path("output/prompt_history.json")
+    diverse_prompt = deduplicate_against_history(diverse_prompt, history_path)
 
     return f"""
-You are generating a single still image for a premium {category}-news Instagram post (brand: {brand}).
+{diverse_prompt}
 
-Story context (for you only — DO NOT render as text): {topic}
-Slide {slide_index} of {total_slides}. Narrative role: {role}.
-{hint_block}
-Visual style:
-{visual_style}
-
-Composition (mandatory):
-- Place the main subject and action in the UPPER ~60% of the frame (rule of thirds / centered hero)
-- Keep the LOWER ~35–40% calmer (sky, floor, haze, bokeh, simple geometry) so text can be added later
-- Vertical portrait framing mindset (tall)
-
-Brand overlay note (important composition constraint):
-- A thin divider + small circular tree-logo mark will be composited near ~60–65% height, centered.
-- Keep the center region around that divider relatively uncluttered (avoid high-frequency detail there).
-
-ABSOLUTE RULES:
-{guardrails_text}
-
-Output: one high-end editorial still, no border, no lettering.
+CRITICAL ENGINE RULES:
+- The output must be a PURE SCENE without any branding, logos, centered marks, or watermark symbols in the image.
+- Any branding (dividers, tree marks) will be added later; DO NOT generate them in the image background.
+- The image MUST NOT contain any recognizable letters, words, numbers, or photorealistic watermarks.
+- DO NOT generate photorealistic faces of active celebrities or politicians.
 """.strip()
 
 
@@ -423,6 +411,13 @@ def try_render_gemini_carousel(
             )
         else:
             persona = load_persona()
+            # Get content visual type from story brief
+            cvt = str(brief.get("content_visual_type") or "").strip()
+            if cvt not in ("founder", "product", "infrastructure", "news", "insight"):
+                cvt = classify_content_type(
+                    topic_title or slug.replace("_", " "),
+                    " ".join(str(t) for t in texts[:3]),
+                )
             prompt = build_cinematic_background_prompt(
                 topic_title=topic_title or headline or slug.replace("_", " "),
                 slide_role=role,
@@ -430,6 +425,7 @@ def try_render_gemini_carousel(
                 slide_index=i,
                 total_slides=total,
                 persona=persona,
+                content_visual_type=cvt,
             )
 
         raw: Optional[Image.Image] = None
