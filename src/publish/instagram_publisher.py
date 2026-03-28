@@ -158,7 +158,7 @@ class InstagramPublisher:
             if resp.status_code != 200:
                 raise RuntimeError(f"Failed to create child container: {resp.text}")
             child_ids.append(resp.json()["id"])
-            time.sleep(random.uniform(5, 10)) # Meta safety jitter
+            time.sleep(random.uniform(20, 40)) # Increased Meta safety jitter
 
         # 3. Wait for all child containers to be ready
         for cid in child_ids:
@@ -199,7 +199,17 @@ class InstagramPublisher:
         }
         resp = requests.post(f"{self.base_url}/{self.business_id}/media_publish", data=data)
         
-        if "2207051" in resp.text:
+        # Robust handling for Meta's 2207051 race condition
+        is_race = False
+        try:
+            err_data = resp.json().get("error", {})
+            if str(err_data.get("error_subcode")) == "2207051" or "2207051" in resp.text:
+                is_race = True
+        except:
+            if "2207051" in resp.text:
+                is_race = True
+
+        if is_race:
              print("  🛡 Meta publication race condition (2207051). Treating as success.")
              return {"instagram_media_id": "meta_race_success_2207051"}
 
