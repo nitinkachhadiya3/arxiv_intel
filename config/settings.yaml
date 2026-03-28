@@ -46,8 +46,15 @@ paths:
 
 scheduler:
   ingestion_interval_minutes: 30
-  full_pipeline_runs_per_day: 3
-  full_pipeline_at: []
+  full_pipeline_runs_per_day: 5
+  publish_jitter_range: [30, 90] # Anti-blocking jitter (seconds)
+  peak_windows_ist:
+    - ["08:30", "10:30"] # India Morning / US Night
+    - ["13:00", "15:00"] # India Afternoon
+    - ["18:30", "20:30"] # India Evening / US Morning
+    - ["21:15", "23:15"] # India Night
+    - ["05:45", "07:45"] # US Evening / India Early Morning
+
 
 trends:
   geo: IN
