@@ -57,7 +57,7 @@ def fetch_trending_searches(geo: str = "IN") -> List[str]:
             return []
         client = genai.Client(api_key=api_key)
         resp = client.models.generate_content(
-            model="gemini-2.5-flash",  # Reliable available model
+            model="gemini-3.1-flash-lite-preview",  # Upgraded to Flash 3 model as requested
             contents=[types.Content(role="user", parts=[types.Part.from_text(text=(
                 f"What are top 5 trending AI, machine learning, or technology topics in {geo} right now? "
                 "Return ONLY a comma-separated list of keywords. Example: OpenAI Sora, Nvidia Stocks, Apple Vision Pro"
@@ -108,7 +108,7 @@ def enrich_trend_with_gemini(trend_keyword: str) -> Optional[Dict[str, Any]]:
 
         client = genai.Client(api_key=api_key)
         resp = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite-preview",  # Upgraded to Flash 3 model
             contents=[types.Content(role="user", parts=[types.Part.from_text(text=(
                 f"The keyword '{trend_keyword}' is trending on Google right now. "
                 "Write a short AI/tech news post about it. Return ONLY valid JSON:\n"

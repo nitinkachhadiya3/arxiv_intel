@@ -139,7 +139,7 @@ def _fetch_gemini_fresh() -> Optional[Dict[str, Any]]:
 
         client = genai.Client(api_key=api_key)
         resp = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite-preview",  # Upgraded to Flash 3 model
             contents=[types.Content(role="user", parts=[types.Part.from_text(text=(
                 "You are a tech news editor. Return ONLY valid JSON with the latest, "
                 "most interesting AI or technology news from TODAY. Pick a unique story. "
