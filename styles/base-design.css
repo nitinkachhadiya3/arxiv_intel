@@ -1,0 +1,79 @@
+/* Base tokens for the design system */
+:root {
+  /* Layout constraints */
+  --site-max-width: 1440px;
+  --header-height: 80px;
+  --sidebar-width: 280px;
+  
+  /* Primary Palette */
+  --p-900: #0a0a2a; /* Deep cosmic navy */
+  --p-800: #14144b;
+  --p-600: #2563eb; /* Science blue */
+  --p-400: #60a5fa;
+  --p-a: rgba(37, 99, 235, 0.1);
+
+  /* Neutrals */
+  --n-base: #f8fafc;
+  --n-text: #1e293b;
+  --n-muted: #64748b;
+  --n-border: #e2e8f0;
+  
+  /* Science Accent */
+  --accent: #0f172a;
+  --paper-bg: #ffffff;
+  --gradient-deep: linear-gradient(135deg, #0a0a2a 0%, #1a1a5a 100%);
+  --glow-blue: 0 0 20px rgba(37, 99, 235, 0.3);
+}
+
+.science-container {
+  max-width: var(--site-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.card-elevation {
+  background: white;
+  border: 1px solid var(--n-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-elevation:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: var(--p-400);
+}
+
+.gradient-text {
+  background: linear-gradient(to right, #2563eb, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.science-button {
+  background: var(--p-600);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.science-button:hover {
+  background: var(--p-400);
+  box-shadow: var(--glow-blue);
+}
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--n-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
