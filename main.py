@@ -283,58 +283,21 @@ def _cli(argv: list[str] | None = None) -> int:
             os.environ["DRY_RUN_PUBLISH"] = "0" 
         cfg = get_config()
         
-        # ── FRESH TOPIC: fetch latest AI/tech news via Gemini ──
+        # ── MULTI-SOURCE TOPIC PICKER ──
         import time as _time
-        from google import genai as _genai
-        from google.genai import types as _types
-
-        api_key = (getattr(cfg, "gemini_api_key", None) or os.getenv("GEMINI_API_KEY") or "").strip()
-        _client = _genai.Client(api_key=api_key)
-        
-        print("🔍 Fetching today's FRESH AI & Tech news...")
-        _fresh_resp = _client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[_types.Content(role="user", parts=[_types.Part.from_text(text=(
-                "You are a tech news editor. Return ONLY valid JSON (no markdown) with the latest, "
-                "most interesting AI or technology news from TODAY. Pick something that has NOT been "
-                "covered before — avoid OpenAI Sora shutdown stories. "
-                "Format:\n"
-                '{"topic": "One-line headline (max 80 chars)", '
-                '"slides": ["Slide 1 fact...", "Slide 2 fact...", "Slide 3 fact...", "Slide 4 fact..."], '
-                '"sources": [{"title": "Source name", "url": "https://..."}], '
-                '"hashtags": "#Tag1 #Tag2 #Tag3 #Tag4 #Tag5"}'
-            ))])],
-            config=_types.GenerateContentConfig(
-                temperature=0.7,
-                response_mime_type="application/json",
-            ),
-        )
-        
         import re as _re
-        _fresh_text = getattr(_fresh_resp, "text", "") or ""
-        _m = _re.search(r"\{[\s\S]*\}", _fresh_text)
-        if _m:
-            _fresh = json.loads(_m.group(0))
-        else:
-            # Fallback: use a different hardcoded topic
-            _fresh = {
-                "topic": f"Jeff Bezos Launches Prometheus AI with $6.2B Funding",
-                "slides": [
-                    "Jeff Bezos and Vik Bajaj have co-founded Prometheus, an AI venture backed by $6.2 billion in funding.",
-                    "The company aims to revolutionize manufacturing and engineering with sophisticated AI models.",
-                    "Prometheus plans to acquire companies to integrate advanced AI into aerospace and automotive operations.",
-                    "This marks one of the largest AI startup launches in 2026, signaling massive industry investment."
-                ],
-                "sources": [{"title": "Prometheus AI Launch", "url": "https://nextunicorn.ventures"}],
-                "hashtags": "#AI #Prometheus #JeffBezos #TechNews #Startup"
-            }
+        from src.ingestion.topic_picker import pick_fresh_topic
+
+        print("🔍 Fetching FRESH topic from multi-source rotation...")
+        _fresh = pick_fresh_topic()
         
         topic = _fresh["topic"]
-        print(f"🚀 GENERATING FRESH AI & TECH POST: {topic}...")
+        print(f"🚀 GENERATING FRESH POST [{_fresh.get('content_source', 'unknown')}]: {topic}...")
         
         # Create a unique slug based on topic
         _slug_base = _re.sub(r'[^a-z0-9]+', '_', topic.lower().strip())[:40].strip('_')
         out_slug = f"tech_{_slug_base}_{int(_time.time()) % 100000}"
+
         
         raw_post = {
             "topic": topic,
