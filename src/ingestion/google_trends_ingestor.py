@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 _TECH_SEEDS = {
+
     "ai", "artificial intelligence", "machine learning", "llm", "gpt",
     "openai", "google", "microsoft", "nvidia", "apple", "meta", "amazon",
     "robot", "autonomous", "agent", "chip", "cloud", "startup", "quantum",
@@ -31,15 +32,49 @@ def _load_trends_config() -> Dict:
 
 
 def fetch_trending_searches(geo: str = "IN") -> List[str]:
-    """Get today's trending searches from Google Trends."""
+    """Get today's trending searches from Google Trends with Gemini fallback."""
+    # Attempt 1: pytrends
     try:
         from pytrends.request import TrendReq
+        # Increased timeout and added retries via TrendReq if supported, 
+        # but pytrends doesn't expose timeout easily in TrendReq constructor.
+        # We'll just try it once.
         pytrend = TrendReq(hl="en-US", tz=330)
         trending = pytrend.trending_searches(pn="india" if geo == "IN" else "united_states")
-        return [str(t) for t in trending[0].tolist()[:20]]
+        if not trending.empty:
+            return [str(t) for t in trending[0].tolist()[:20]]
     except Exception as e:
-        print(f"  ⚠ Google Trends fetch failed: {e}")
-        return []
+        print(f"  ⚠ Google Trends (pytrends) fetch failed: {e}")
+
+    # Attempt 2: Gemini Fallback (Robust discovery)
+    print(f"  📡 Falling back to Gemini for trending topic discovery...")
+    try:
+        from google import genai
+        from google.genai import types
+        api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not api_key:
+            print("  ⚠ GEMINI_API_KEY not set, cannot use Gemini fallback.")
+            return []
+        client = genai.Client(api_key=api_key)
+        resp = client.models.generate_content(
+            model="gemini-2.5-flash",  # Reliable available model
+            contents=[types.Content(role="user", parts=[types.Part.from_text(text=(
+                f"What are top 5 trending AI, machine learning, or technology topics in {geo} right now? "
+                "Return ONLY a comma-separated list of keywords. Example: OpenAI Sora, Nvidia Stocks, Apple Vision Pro"
+            ))])],
+        )
+
+        text = resp.text
+        if text:
+            print(f"    ✨ Gemini found trends: {text}")
+            return [t.strip() for t in text.split(",") if t.strip()]
+
+    except Exception as e:
+        print(f"  ⚠ Gemini trending fallback failed: {e}")
+
+    return []
+
+
 
 
 def filter_tech_trends(trends: List[str], extra_seeds: Optional[set] = None) -> List[str]:
