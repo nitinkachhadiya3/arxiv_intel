@@ -58,11 +58,21 @@ async def handle_custom_post(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # Message handler for description (when awaiting)
 async def handle_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if state.get(chat_id, {}).get("mode") == "await_desc":
-        state[chat_id]["desc"] = update.message.text
+    text = update.message.text
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Received message from {chat_id}: {text}")
+
+    current_mode = state.get(chat_id, {}).get("mode", "idle")
+    
+    if current_mode == "await_desc":
+        state[chat_id]["desc"] = text
         state[chat_id]["photos"] = []
         state[chat_id]["mode"] = "await_photos"
         await update.message.reply_text("📸 Great! Now send up to 5 photos (one per message).\n\nWhen you are finished, send /done.")
+    else:
+        # If in idle or unknown state, show the main menu
+        await start(update, context)
 
 # Photo handler – store uploaded photo URLs via Cloudinary
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -150,7 +160,7 @@ def register_handlers(app):
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_get_posts, pattern="^GET_POSTS$"))
     app.add_handler(CallbackQueryHandler(handle_custom_post, pattern="^CUSTOM_POST$"))
-    app.add_handler(CallbackQueryHandler(handle_publish, pattern="^POST\|"))
+    app.add_handler(CallbackQueryHandler(handle_publish, pattern=r"^POST\|"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_description))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(CommandHandler("done", finish_photos))

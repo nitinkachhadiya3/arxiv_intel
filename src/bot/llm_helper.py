@@ -17,10 +17,22 @@ def generate_content(description: str, image_urls: List[str], category: str = "A
         return captions, prompts
 
     try:
+        import urllib.request
         client = genai.Client(api_key=api_key)
         
         # Prepare parts for multimodal Gemini model
-        parts = [types.Part.from_text(text=(
+        parts = []
+        
+        # Add image URLs as parts (multimodal) - must download bytes for external URLs
+        for url in image_urls[:5]: # Limit to 5
+            try:
+                with urllib.request.urlopen(url) as response:
+                    img_data = response.read()
+                    parts.append(types.Part.from_bytes(data=img_data, mime_type="image/jpeg"))
+            except Exception as e:
+                print(f"  ⚠ Failed to download context image {url}: {e}")
+
+        parts.append(types.Part.from_text(text=(
             f"You are a premium AI tech content creator. A user has provided a description: '{description}' "
             f"and {len(image_urls)} images for context. "
             f"The category is '{category}'.\n\n"
@@ -30,14 +42,10 @@ def generate_content(description: str, image_urls: List[str], category: str = "A
             f"2. A highly detailed image generation prompt for a futuristic tech illustration "
             f"that captures the essence of the user's input but in a different, more professional view.\n\n"
             f"Return ONLY a JSON array of objects with keys 'caption' and 'image_prompt'."
-        ))]
-        
-        # Add image URLs as parts (multimodal)
-        for url in image_urls[:5]: # Limit to 5
-            parts.append(types.Part.from_uri(file_uri=url, mime_type="image/jpeg"))
+        )))
 
         resp = client.models.generate_content(
-            model="gemini-1.5-flash-latest", # Multi-modal stable
+            model="gemini-3.1-flash-lite-preview", # Consistent with ingestion
             contents=[types.Content(role="user", parts=parts)],
             config=types.GenerateContentConfig(
                 temperature=0.8,

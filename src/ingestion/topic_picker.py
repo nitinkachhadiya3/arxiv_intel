@@ -75,17 +75,28 @@ def _is_duplicate(topic: str) -> bool:
         return False
 
     cutoff = time.time() - (_COOLDOWN_HOURS * 3600)
-    topic_words = set(re.sub(r"[^a-z0-9 ]", "", topic.lower()).split())
+    
+    # Common tech/news stopwords to ignore for better similarity matching
+    _STOP_WORDS = {"a", "an", "the", "in", "on", "at", "to", "for", "with", "by", "is", "are", "was", "were", "and", "or", "but", "of"}
+    
+    topic_words = {w for w in re.sub(r"[^a-z0-9 ]", "", topic.lower()).split() if w not in _STOP_WORDS}
 
     for entry in posted:
         if entry.get("ts", 0) < cutoff:
             continue
-        old_words = set(re.sub(r"[^a-z0-9 ]", "", entry.get("topic", "").lower()).split())
+        old_topic = entry.get("topic", "").lower()
+        old_words = {w for w in re.sub(r"[^a-z0-9 ]", "", old_topic).split() if w not in _STOP_WORDS}
+        
         if not topic_words or not old_words:
+            # If headlines are too short, skip similarity and check exact match
+            if topic.strip().lower() == old_topic.strip():
+                return True
             continue
-        # Jaccard similarity
+            
+        # Jaccard similarity on non-stopwords
         overlap = len(topic_words & old_words) / max(len(topic_words | old_words), 1)
-        if overlap > 0.5:
+        # 0.45 is a safer threshold for "nearly identical" when ignoring stopwords
+        if overlap > 0.45:
             return True
     return False
 

@@ -158,7 +158,7 @@ class InstagramPublisher:
             if resp.status_code != 200:
                 raise RuntimeError(f"Failed to create child container: {resp.text}")
             child_ids.append(resp.json()["id"])
-            time.sleep(random.uniform(20, 40)) # Increased Meta safety jitter
+            time.sleep(1) # Reduced Meta safety jitter
 
         # 3. Wait for all child containers to be ready
         for cid in child_ids:
@@ -176,8 +176,6 @@ class InstagramPublisher:
         resp = requests.post(f"{self.base_url}/{self.business_id}/media", data=data)
         if "2207051" in resp.text:
              print("  🛡 Meta race condition / duplicate detected during container creation. Continuing...")
-             # If we can't create the container, we might already have one or the post is live.
-             # We'll try to proceed or return a dummy ID.
         
         if resp.status_code != 200 and "2207051" not in resp.text:
             raise RuntimeError(f"Failed to create carousel container: {resp.text}")
@@ -186,10 +184,8 @@ class InstagramPublisher:
         if not carousel_container_id and "2207051" in resp.text:
              return {"instagram_media_id": "meta_race_detected_success"}
         
-        # Jitter before final publish
-        pause = random.uniform(30, 90)
-        print(f"  🎭 Ghost-Safe Jitter: Sleeping {pause:.1f}s before final publish...")
-        time.sleep(pause)
+        # Reduced jitter before final publish
+        time.sleep(1)
 
         # 5. Finalize Publication
         print("  📢 Finalizing publication...")
@@ -216,6 +212,57 @@ class InstagramPublisher:
         if resp.status_code != 200:
             raise RuntimeError(f"Failed to finalize publication: {resp.text}")
 
+
+        media_id = resp.json().get("id")
+        return {"instagram_media_id": media_id}
+
+    def publish_single_image_from_path(self, image_path: Path | str, caption: str) -> Dict[str, Any]:
+        """
+        Full single image publication flow.
+        """
+        image_path = Path(image_path) if isinstance(image_path, str) else image_path
+        print(f"🚀 Starting Single-Image Instagram Publication: {image_path.name}")
+        
+        # 1. Upload to Cloudinary
+        image_url = self._upload_to_cloudinary(image_path)
+        if not image_url:
+            raise RuntimeError(f"Cloudinary upload failed for {image_path.name}")
+
+        # 2. Create Media Container
+        print("  📦 Creating media container...")
+        data = {
+            "image_url": image_url,
+            "caption": caption,
+            "access_token": self.access_token
+        }
+        resp = requests.post(f"{self.base_url}/{self.business_id}/media", data=data)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Failed to create media container: {resp.text}")
+        
+        container_id = resp.json()["id"]
+
+        # 3. Wait for container
+        if not self._wait_for_container(container_id):
+            raise RuntimeError(f"Media container {container_id} never finished.")
+
+        # Jitter before final publish
+        pause = random.uniform(30, 60)
+        print(f"  🎭 Ghost-Safe Jitter: Sleeping {pause:.1f}s before final publish...")
+        time.sleep(pause)
+
+        # 4. Finalize Publication
+        print("  📢 Finalizing publication...")
+        data = {
+            "creation_id": container_id,
+            "access_token": self.access_token
+        }
+        resp = requests.post(f"{self.base_url}/{self.business_id}/media_publish", data=data)
+        
+        if resp.status_code != 200:
+            if "2207051" in resp.text:
+                print("  🛡 Meta publication race condition (2207051). Treating as success.")
+                return {"instagram_media_id": "meta_race_success_2207051"}
+            raise RuntimeError(f"Failed to finalize publication: {resp.text}")
 
         media_id = resp.json().get("id")
         return {"instagram_media_id": media_id}
