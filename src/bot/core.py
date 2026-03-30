@@ -92,8 +92,19 @@ def generate_custom_previews(description: str, user_image_urls: List[str]) -> Li
     """Generate drafts for the *Custom Post* flow.
     Returns a list of draft dicts with keys: uuid, caption, media_urls.
     """
+    # Fail-safe environment seeding
+    if not os.getenv("GEMINI_API_KEY"):
+        from dotenv import load_dotenv
+        root = Path(__file__).resolve().parent.parent.parent
+        load_dotenv(root / ".env", override=True)
+        key = os.getenv("GEMINI_API_KEY", "").strip()
+        if key:
+            os.environ["GOOGLE_API_KEY"] = key
+            
     draft_count = Config.CUSTOM_POST_DRAFT_COUNT
-    captions, prompts = generate_content(description, user_image_urls, draft_count=draft_count)
+    # Truncate description to prevent token limit errors
+    safe_desc = description[:10000] if len(description) > 10000 else description
+    captions, prompts = generate_content(safe_desc, user_image_urls, draft_count=draft_count)
     generator = CarouselImageGenerator()
     drafts = []
     
@@ -132,6 +143,29 @@ def _download_from_cloudinary(url: str, dest_dir: str) -> str:
     local_path = os.path.join(dest_dir, filename)
     urllib.request.urlretrieve(url, local_path)
     return local_path
+
+import time
+
+def wait_for_generation(job_id, check_func, max_retries=10, delay=10):
+    """
+    Robust polling utility to wait for a background task. 
+    Implements a delay to prevent terminal flooding.
+    """
+    retries = 0
+    while retries < max_retries:
+        status = check_func(job_id)
+        if status == "completed":
+            return True
+        elif status == "failed":
+            print("Generation failed.")
+            return False
+            
+        print(f"Status check {retries+1}/{max_retries}...")
+        time.sleep(delay) 
+        retries += 1
+        
+    print("Timed out.")
+    return False
 
 def publish_selected(preview_uuid: str) -> Dict[str, Any]:
     """Publish a preview or custom draft to Instagram.

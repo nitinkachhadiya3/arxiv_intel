@@ -42,86 +42,100 @@ async def handle_get_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await query.message.reply_text(f"❌ Error fetching posts: {str(e)}")
 
-# Callback for Custom Post – start description collection
+# Callback for Custom Post – start collection
 async def handle_custom_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    chat_id = query.message.chat_id
     
-    # Initialize state for this chat if not present
-    if chat_id not in state:
-        state[chat_id] = {"mode": "idle", "desc": "", "photos": []}
-        
-    state[chat_id]["mode"] = "await_desc"
-    await query.message.reply_text("✍️ Please send a short description for your custom post.")
-
-# Message handler for description (when awaiting)
-async def handle_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    text = update.message.text
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Received message from {chat_id}: {text}")
-
-    current_mode = state.get(chat_id, {}).get("mode", "idle")
-    
-    if current_mode == "await_desc":
-        state[chat_id]["desc"] = text
-        state[chat_id]["photos"] = []
-        state[chat_id]["mode"] = "await_photos"
-        await update.message.reply_text("📸 Great! Now send up to 5 photos (one per message).\n\nWhen you are finished, send /done.")
-    else:
-        # If in idle or unknown state, show the main menu
-        await start(update, context)
-
-# Photo handler – store uploaded photo URLs via Cloudinary
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    if state.get(chat_id, {}).get("mode") == "await_photos":
-        # Get the highest resolution photo
-        photo = update.message.photo[-1]
-        file = await photo.get_file()
-        
-        # Download to a temporary file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-        temp_path = temp_file.name
-        temp_file.close()
-        
-        try:
-            await file.download_to_drive(custom_path=temp_path)
-            
-            # Upload to Cloudinary
-            from src.bot.cloudinary_uploader import CloudinaryUploader
-            url = CloudinaryUploader.upload_file(temp_path)
-            
-            state[chat_id]["photos"].append(url)
-            count = len(state[chat_id]["photos"])
-            await update.message.reply_text(f"✅ Photo {count}/5 uploaded.")
-            
-            if count >= 5:
-                await update.message.reply_text("✨ Maximum of 5 photos reached. Generating drafts...")
-                await send_custom_drafts(update, context)
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-
-# /done command to finish photo collection
-async def finish_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    if state.get(chat_id, {}).get("mode") == "await_photos":
-        if not state[chat_id]["photos"]:
-            await update.message.reply_text("⚠️ Please send at least one photo or use /start to cancel.")
-            return
-        await update.message.reply_text("✨ Generating custom drafts based on your input...")
-        await send_custom_drafts(update, context)
-
-async def send_custom_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    desc = state[chat_id].get("desc", "")
-    photos = state[chat_id].get("photos", [])
+    # Use effective_user.id for most reliable ID
+    user_id = update.effective_user.id
     
     try:
-        drafts = generate_custom_previews(desc, photos)
+        # Reset session for custom post
+        user_data = state.get_user_data(user_id)
+        user_data["mode"] = "collect_custom"
+        user_data["desc"] = ""
+        user_data["photos"] = []
+        state.set_user_data(user_id, user_data)
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=(
+                "CUSTOM POST MODE\n\n"
+                "Please send reference images (max 5) or text content now.\n"
+                "You can send multiple items. Click 'Submit & Generate' when finished."
+            )
+        )
+    except Exception as e:
+        import logging
+        logging.error(f"Error in handle_custom_post: {e}")
+        await context.bot.send_message(chat_id=user_id, text=f"Error: {str(e)}")
+
+# Message handler for text and images during collection
+async def handle_custom_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_data = state.get_user_data(user_id)
+    
+    if user_data.get("mode") != "collect_custom":
+        await start(update, context)
+        return
+
+    try:
+        if update.message.text:
+            user_data["desc"] = update.message.text
+            await context.bot.send_message(chat_id=user_id, text="Text received.")
+        
+        elif update.message.photo:
+            if len(user_data["photos"]) >= 5:
+                await context.bot.send_message(chat_id=user_id, text="Max 5 photos.")
+            else:
+                photo = update.message.photo[-1]
+                file = await photo.get_file()
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                temp_path = temp_file.name
+                temp_file.close()
+                try:
+                    await file.download_to_drive(custom_path=temp_path)
+                    from src.bot.cloudinary_uploader import CloudinaryUploader
+                    url = CloudinaryUploader.upload_file(temp_path)
+                    user_data["photos"].append(url)
+                    await context.bot.send_message(chat_id=user_id, text=f"Photo {len(user_data['photos'])}/5 received.")
+                finally:
+                    if os.path.exists(temp_path): os.remove(temp_path)
+
+        state.set_user_data(user_id, user_data)
+        
+        keyboard = [[InlineKeyboardButton("Submit & Generate", callback_data="SUBMIT_CUSTOM")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=user_id, text="Click below to finish:", reply_markup=reply_markup)
+    except Exception as e:
+        await context.bot.send_message(chat_id=user_id, text=f"Input Error: {str(e)}")
+
+# Callback for Submit button
+async def handle_submit_custom(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    user_data = state.get_user_data(user_id)
+    
+    if not user_data.get("desc") and not user_data.get("photos"):
+        await context.bot.send_message(chat_id=user_id, text="Please provide content first.")
+        return
+        
+    await context.bot.send_message(chat_id=user_id, text="Generating your post preview...")
+    await send_custom_drafts(update, context)
+
+async def send_custom_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Use trigger originating update (could be query or message)
+    chat_id = update.effective_chat.id
+    user_data = state.get_user_data(chat_id)
+    
+    desc = user_data.get("desc", "")
+    photos = user_data.get("photos", [])
+    
+    try:
+        import asyncio
+        drafts = await asyncio.to_thread(generate_custom_previews, desc, photos)
         for draft in drafts:
             media = []
             for idx, url in enumerate(draft["media_urls"]):
@@ -130,14 +144,21 @@ async def send_custom_drafts(update: Update, context: ContextTypes.DEFAULT_TYPE)
             
             button = InlineKeyboardButton("🚀 Post to IG", callback_data=f"POST|{draft['uuid']}")
             reply_markup = InlineKeyboardMarkup([[button]])
-            await update.message.reply_media_group(media=media)
-            await update.message.reply_text(f"Action for draft above:", reply_markup=reply_markup)
             
-        # Reset mode but keep state for IDs until published (or handled differently)
-        state[chat_id]["mode"] = "idle"
-        await update.message.reply_text("✅ Drafts generated! Click 'Post to IG' to publish.")
+            # Application of the preview message
+            if len(media) > 1:
+                await context.bot.send_media_group(chat_id=chat_id, media=media)
+            else:
+                await context.bot.send_photo(chat_id=chat_id, photo=media[0].media, caption=media[0].caption)
+                
+            await context.bot.send_message(chat_id=chat_id, text=f"Final Preview (Ghost-Safe):", reply_markup=reply_markup)
+            
+        # Reset mode
+        user_data["mode"] = "idle"
+        state.set_user_data(chat_id, user_data)
+        await context.bot.send_message(chat_id=chat_id, text="✅ Generation complete! Check the previews above.")
     except Exception as e:
-        await update.message.reply_text(f"❌ Error generating drafts: {str(e)}")
+        await context.bot.send_message(chat_id=chat_id, text=f"❌ Error generating drafts: {str(e)}")
 
 # Callback for publishing a selected preview/draft
 async def handle_publish(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -152,15 +173,17 @@ async def handle_publish(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             result = publish_selected(preview_uuid)
             media_id = result.get('instagram_media_id', 'Success')
-            await query.message.reply_text(f"✅ Post published successfully!\nMedia ID: `{media_id}`", parse_mode='Markdown')
+            await query.message.reply_text(f"✅ Published successfully!\nMedia: IG_{media_id}", parse_mode='Markdown')
         except Exception as e:
             await query.message.reply_text(f"❌ Failed to publish: {str(e)}")
 
 def register_handlers(app):
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_get_posts, pattern="^GET_POSTS$"))
+    # CallbackQuery handlers MUST come first to ensure buttons are caught
     app.add_handler(CallbackQueryHandler(handle_custom_post, pattern="^CUSTOM_POST$"))
+    app.add_handler(CallbackQueryHandler(handle_get_posts, pattern="^GET_POSTS$"))
+    app.add_handler(CallbackQueryHandler(handle_submit_custom, pattern="^SUBMIT_CUSTOM$"))
     app.add_handler(CallbackQueryHandler(handle_publish, pattern=r"^POST\|"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_description))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    app.add_handler(CommandHandler("done", finish_photos))
+    
+    # Commands and Messages
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_custom_input))
