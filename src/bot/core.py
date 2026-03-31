@@ -104,31 +104,39 @@ def generate_custom_previews(description: str, user_image_urls: List[str]) -> Li
     draft_count = Config.CUSTOM_POST_DRAFT_COUNT
     # Truncate description to prevent token limit errors
     safe_desc = description[:10000] if len(description) > 10000 else description
-    captions, prompts = generate_content(safe_desc, user_image_urls, draft_count=draft_count)
+    drafts_data = generate_content(safe_desc, user_image_urls, draft_count=draft_count)
     generator = CarouselImageGenerator()
     drafts = []
     
-    for i in range(draft_count):
+    for i, draft_data in enumerate(drafts_data):
         draft_uuid = str(uuid.uuid4())
         slug = f"custom_{draft_uuid[:8]}"
         
+        slides = draft_data.get("slides", [])
+        if not slides:
+            continue
+            
+        slide_texts = [s.get("caption", "...") for s in slides]
+        visual_prompts = [s.get("image_prompt", "...") for s in slides]
+        main_caption = slide_texts[0] if slide_texts else "Custom Post"
+        
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = Path(tmp_dir)
-            # Use the generated caption and prompt for rendering
+            # Render all slides for this draft
             media_paths = generator.render_topic_slides(
                 topic_slug=slug,
-                slide_texts=[captions[i]],
+                slide_texts=slide_texts,
                 out_dir=out_dir,
                 topic_title=description[:50],
-                cover_headline=captions[i],
-                visual_prompts=[prompts[i]],
+                cover_headline=main_caption,
+                visual_prompts=visual_prompts,
                 user_image_urls=user_image_urls
             )
             media_urls = [CloudinaryUploader.upload_file(str(p)) for p in media_paths]
             
         draft = {
             "uuid": draft_uuid,
-            "caption": captions[i],
+            "caption": main_caption,
             "media_urls": media_urls,
         }
         drafts.append(draft)
