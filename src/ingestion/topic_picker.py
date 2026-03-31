@@ -20,15 +20,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-# Source rotation order
-_SOURCE_ORDER = ["ipl", 
-    "rss",
-    "hf_paper",
-    "google_trends",
-    "ipl",
-    "hf_model",
-    "gemini_fresh",
-]
+# Source rotation order - Locked to IPL for 2026 season
+_SOURCE_ORDER = ["ipl"]
 
 _ROTATION_FILE = Path("output/source_rotation.json")
 _POSTED_FILE = Path("output/posted_topics.json")

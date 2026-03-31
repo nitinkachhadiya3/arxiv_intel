@@ -27,13 +27,18 @@ class JobScheduler:
         else:
             self.windows = self.DEFAULT_WINDOWS
 
-    # IST Windows (expressed as HH:MM start/end) - Defaults if not in config
+    # IST Windows (10 slots per day for high-frequency IPL coverage)
     DEFAULT_WINDOWS = [
-        ("08:30", "10:30"), # India Morning / US Night
-        ("13:00", "15:00"), # India Afternoon
-        ("18:30", "20:30"), # India Evening / US Morning
-        ("21:15", "23:15"), # India Night
-        ("05:45", "07:45"), # US Evening / India Early Morning
+        ("08:15", "09:15"), # Morning Brief
+        ("10:30", "11:30"), # Late Morning
+        ("13:00", "14:00"), # Afternoon Story
+        ("15:30", "16:30"), # Pre-Match Buzz
+        ("18:00", "19:00"), # Match Build-up
+        ("19:45", "20:30"), # Live: Powerplay/Strategy
+        ("21:00", "21:45"), # Live: Mid-Innings
+        ("22:15", "22:45"), # Live: Death Overs
+        ("23:15", "23:55"), # Post-Match Result
+        ("06:30", "07:30"), # US Morning / India Recap
     ]
 
     def _get_today_str(self) -> str:

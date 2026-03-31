@@ -25,7 +25,8 @@ def pick_best_cricket_topic() -> Optional[Dict[str, Any]]:
     # Using 3.1 Flash for "Creative Director" autonomy and grounding
     prompt = (
         "Search Google for a highly interesting, tactical, or unusual story from the latest IPL 2026 matches. "
-        "Do not just provide a score. Look for specific player performance peaks, tactical surprises, or venue-specific records.\n\n"
+        "IMPORTANT: Pick a unique story that isn't just a generic score. Look for specific player performance peaks, "
+        "unusual tactical surprises, or venue-specific records that are trending NOW.\n\n"
         "DECIDE the best format for this story:\n"
         "1. 'SINGLE' - One high-impact summary with a powerful hero image.\n"
         "2. 'CAROUSEL' - A 5-slide breakdown using 'IMAGE' slides (visuals) and 'STATS' slides (data-heavy/text-only).\n\n"
