@@ -184,6 +184,42 @@ VISUAL_WORLDS: List[Dict[str, Any]] = [
         ),
         "mood": "human, cinematic, contemplative",
     },
+    {
+        "id": "ipl_stadium_cinematic",
+        "name": "Cinematic IPL Stadium",
+        "prompt": (
+            "Epic wide-angle photograph of a modern cricket stadium at night during an IPL match. "
+            "Brilliant floodlights creating a hazy atmospheric glow, a perfectly manicured green pitch, "
+            "vibrant team-colored banners in the stands, and a blurred energetic crowd. "
+            "Professional sports photography, Canon 1DX Mark III, 16-35mm lens. "
+            "Grand, atmospheric, high-energy sports event aesthetic."
+        ),
+        "mood": "grand, energetic, atmospheric",
+    },
+    {
+        "id": "cricket_action_macro",
+        "name": "Cricket Action Macro",
+        "prompt": (
+            "Professional sports action photograph of a cricket match. Focus on a single dynamic "
+            "moment: a batsman mid-swing with a blurred ball, or a bowler mid-delivery. "
+            "Saturated green grass, white leather ball texture, cricket whites or team jerseys. "
+            "Low-angle perspective, fast shutter speed freezing the action, shallow depth of field. "
+            "Sony Alpha 1, 400mm f/2.8 lens. Intense and professional."
+        ),
+        "mood": "intense, fast-paced, focused",
+    },
+    {
+        "id": "sports_broadcast_minimal",
+        "name": "Minimalist Sports Broadcast",
+        "prompt": (
+            "A clean, minimalist high-end background inspired by premium sports broadcast graphics. "
+            "Soft-focus cricket pitch or stadium lights, dark glassmorphism textures, subtle "
+            "geometric overlays in team colors, plenty of negative space. "
+            "Cinematic studio lighting, 8K resolution, sleek and professional. "
+            "Perfect for displaying data or statistics."
+        ),
+        "mood": "sleek, professional, data-centric",
+    },
 ]
 
 # ── Per-slide variation within a world ───────────────────────────────────
@@ -233,15 +269,25 @@ def _get_slide_variation(slide_index: int, total_slides: int, rng: random.Random
         return _SLIDE_VARIATIONS[3]
 
 
-def _pick_world(topic: str, rng: random.Random) -> Dict[str, Any]:
-    """Pick a visual world based on topic hash for consistency within a post,
-    but different across posts."""
+def _pick_world(topic: str, content_type: str, rng: random.Random) -> Dict[str, Any]:
+    """Pick a visual world based on topic hash and content type."""
+    # Priority: If content type is sports, use sports-specific worlds
+    sports_ids = ["ipl_stadium_cinematic", "cricket_action_macro", "sports_broadcast_minimal"]
+    if content_type == "sports":
+        available_worlds = [w for w in VISUAL_WORLDS if w["id"] in sports_ids]
+    else:
+        # Default to tech/editorial worlds, excluding sports
+        available_worlds = [w for w in VISUAL_WORLDS if w["id"] not in sports_ids]
+
+    if not available_worlds:
+        available_worlds = VISUAL_WORLDS
+
     # Use topic hash to get consistent world for all slides of same post
     topic_hash = int(hashlib.md5(topic.encode()).hexdigest(), 16)
-    # Add time-based salt so same topic on different days gets different world
+    # Add time-based salt
     day_salt = int(time.time()) // 86400
-    idx = (topic_hash + day_salt) % len(VISUAL_WORLDS)
-    return VISUAL_WORLDS[idx]
+    idx = (topic_hash + day_salt) % len(available_worlds)
+    return available_worlds[idx]
 
 
 def build_diverse_prompt(
@@ -257,7 +303,7 @@ def build_diverse_prompt(
         rng = random.Random(int(time.time() * 1000) + slide_index)
 
     # Pick a visual world (consistent per-post, varies across posts)
-    world = _pick_world(topic, rng)
+    world = _pick_world(topic, content_type, rng)
 
     # Get slide-specific variation
     slide_var = _get_slide_variation(slide_index, total_slides, rng)
@@ -360,6 +406,8 @@ _INFRA_KEYWORDS = {"data center", "datacenter", "server", "cloud", "infrastructu
                    "hyperscaler", "bandwidth", "capacity"}
 _INSIGHT_KEYWORDS = {"study", "research", "survey", "report", "analysis", "paper",
                      "benchmark", "comparison", "trend", "forecast", "statistic"}
+_SPORTS_KEYWORDS = {"ipl", "cricket", "match", "wicket", "stadium", "batsman", "bowler",
+                   "powerplay", "overs", "t20", "championship", "tournament"}
 
 
 def classify_content_type(topic: str, body: str = "") -> str:
@@ -374,4 +422,6 @@ def classify_content_type(topic: str, body: str = "") -> str:
         return "product"
     if any(kw in combined for kw in _INSIGHT_KEYWORDS):
         return "insight"
+    if any(kw in combined for kw in _SPORTS_KEYWORDS):
+        return "sports"
     return "news"

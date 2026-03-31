@@ -438,9 +438,15 @@ def try_render_gemini_carousel(
             )
         else:
             persona = load_persona()
-            # Get content visual type from story brief
+            # Get content visual type from story brief or classify
             cvt = str(brief.get("content_visual_type") or "").strip()
-            if cvt not in ("founder", "product", "infrastructure", "news", "insight"):
+            
+            # Explicitly force sports if source is IPL
+            source = str(brief.get("content_source") or "").lower()
+            if "ipl" in source:
+                cvt = "sports"
+
+            if cvt not in ("founder", "product", "infrastructure", "news", "insight", "sports"):
                 cvt = classify_content_type(
                     topic_title or slug.replace("_", " "),
                     " ".join(str(t) for t in texts[:3]),

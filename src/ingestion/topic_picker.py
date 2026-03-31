@@ -21,7 +21,7 @@ from typing import Any, Dict, Optional
 
 
 # Source rotation order
-_SOURCE_ORDER = [
+_SOURCE_ORDER = ["ipl", 
     "rss",
     "hf_paper",
     "google_trends",
