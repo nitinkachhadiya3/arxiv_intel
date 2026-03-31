@@ -62,18 +62,33 @@ def get_fresh_previews(limit: int = None) -> List[Dict[ Any, Any]]:
     
     for topic in topics:
         topic_title = topic.get('topic', 'Tech Update')
+        post_type = topic.get('post_type', 'CAROUSEL')
         slug = f"preview_{uuid.uuid4().hex[:8]}"
         
+        # Extract slide data (if it's a list of strings, convert to list of dicts for uniformity)
+        raw_slides = topic.get('slides', [])
+        slides_data = []
+        for s in raw_slides:
+            if isinstance(s, dict):
+                slides_data.append(s)
+            else:
+                slides_data.append({"type": "IMAGE", "content": s})
+                
+        # If SINGLE post, we only take the first slide
+        if post_type == "SINGLE":
+            slides_data = slides_data[:1]
+            
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_dir = Path(tmp_dir)
             media_paths = generator.render_topic_slides(
                 topic_slug=slug,
-                slide_texts=topic.get('slides', [topic_title]),
+                slide_texts=[s["content"] for s in slides_data],
                 out_dir=out_dir,
                 topic_title=topic_title,
                 cover_headline=topic_title,
                 visual_prompts=topic.get('visual_prompts', []),
-                story_post=topic
+                story_post=topic,
+                slide_types=[s.get("type", "IMAGE") for s in slides_data]
             )
             
             media_urls = [CloudinaryUploader.upload_file(str(p)) for p in media_paths]

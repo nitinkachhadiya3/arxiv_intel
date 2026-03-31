@@ -95,6 +95,7 @@ def build_cinematic_background_prompt(
     total_slides: int,
     persona: dict = None,
     content_visual_type: str = "news",
+    is_stats: bool = False,
 ) -> str:
     """
     Image-only prompt: dramatic cinematic scene, room for PIL headline band below.
@@ -104,14 +105,21 @@ def build_cinematic_background_prompt(
     topic = _normalize_headline(topic_title or "technology", 200)
     hint = (semantic_visual_hint or "").strip()[:500]
 
-    # Build the diverse, content-type-aware prompt
-    diverse_prompt = build_diverse_prompt(
-        content_type=content_visual_type,
-        topic=topic,
-        slide_index=slide_index,
-        total_slides=total_slides,
-        visual_hint=hint,
-    )
+    if is_stats:
+        diverse_prompt = (
+            f"A sleek, minimalist 3D data dashboard or statistical overlay background for '{topic}'. "
+            f"Professional sports broadcast aesthetic, dark glassmorphism textures, soft glowing data points, "
+            f"and plenty of negative space for text overlays. Cinematic lighting, 8K resolution."
+        )
+    else:
+        # Build the diverse, content-type-aware prompt
+        diverse_prompt = build_diverse_prompt(
+            content_type=content_visual_type,
+            topic=topic,
+            slide_index=slide_index,
+            total_slides=total_slides,
+            visual_hint=hint,
+        )
 
     # Deduplicate against recent history
     history_path = Path("output/prompt_history.json")
@@ -270,6 +278,7 @@ def try_render_gemini_carousel(
     story_post: Optional[Dict[str, Any]] = None,
     slide_bodies: Optional[Sequence[str]] = None,
     reference_images: Optional[Sequence[str]] = None,
+    slide_types: Optional[Sequence[str]] = None,
 ) -> Optional[List[str]]:
     """
     Render carousel JPEGs via Gemini + compositor.
@@ -436,6 +445,10 @@ def try_render_gemini_carousel(
                     topic_title or slug.replace("_", " "),
                     " ".join(str(t) for t in texts[:3]),
                 )
+            # Determine if this slide is a STATS slide
+            stype = slide_types[idx].upper() if slide_types and idx < len(slide_types) else "IMAGE"
+            is_stats = stype == "STATS"
+            
             prompt = build_cinematic_background_prompt(
                 topic_title=topic_title or headline or slug.replace("_", " "),
                 slide_role=role,
@@ -444,6 +457,7 @@ def try_render_gemini_carousel(
                 total_slides=total,
                 persona=persona,
                 content_visual_type=cvt,
+                is_stats=is_stats,
             )
 
         raw: Optional[Image.Image] = None

@@ -22,16 +22,22 @@ def pick_best_cricket_topic() -> Optional[Dict[str, Any]]:
 
     client = genai.Client(api_key=api_key)
     
-    # Using 2.0 Flash for real-time search grounding
+    # Using 3.1 Flash for "Creative Director" autonomy and grounding
     prompt = (
-        "Search Google for the most recent IPL 2026 match (from today or this week). "
-        "Provide a summary of the match results, top 2-3 players, and a tactical highlight. "
-        "Return EXCLUSIVELY a JSON object with this structure:\n"
+        "Search Google for a highly interesting, tactical, or unusual story from the latest IPL 2026 matches. "
+        "Do not just provide a score. Look for specific player performance peaks, tactical surprises, or venue-specific records.\n\n"
+        "DECIDE the best format for this story:\n"
+        "1. 'SINGLE' - One high-impact summary with a powerful hero image.\n"
+        "2. 'CAROUSEL' - A 5-slide breakdown using 'IMAGE' slides (visuals) and 'STATS' slides (data-heavy/text-only).\n\n"
+        "Return EXCLUSIVELY a JSON object:\n"
         "{\n"
-        "  \"topic\": \"The match headline (e.g. MI vs CSK: High-tension finish)\",\n"
-        "  \"slides\": [\"Match result summary\", \"Key player stats\", \"Tactical insight\", \"Points table status\"],\n"
+        "  \"post_type\": \"SINGLE|CAROUSEL\",\n"
+        "  \"topic\": \"Engaging headline\",\n"
+        "  \"slides\": [\n"
+        "    {\"type\": \"IMAGE|STATS\", \"content\": \"The text for this slide\"}\n"
+        "  ],\n"
         "  \"sources\": [{\"title\": \"Source Name\", \"url\": \"https://...\"}],\n"
-        "  \"hashtags\": \"#IPL2026 #Cricket #MatchAnalysis\",\n"
+        "  \"hashtags\": \"#IPL2026 #CricketStrategy...\",\n"
         "  \"content_source\": \"ipl_grounding\"\n"
         "}"
     )
