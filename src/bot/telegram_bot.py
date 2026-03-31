@@ -127,6 +127,11 @@ def main():
             return
         
         webhook_url = webhook_url.rstrip("/")
+        # Smart Fix: Render converts underscores in names to hyphens in URLs
+        if ".onrender.com" in webhook_url:
+            base_url = webhook_url.replace(".onrender.com", "")
+            webhook_url = base_url.replace("_", "-") + ".onrender.com"
+            
         logger.info(f"Starting bot in WEBHOOK mode at {webhook_url}")
         # In a real deployment, you'd specify listen address and port here
         app.run_webhook(
