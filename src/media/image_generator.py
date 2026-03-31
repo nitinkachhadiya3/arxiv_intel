@@ -79,6 +79,7 @@ class CarouselImageGenerator:
         post_template: str = "carousel_standard",
         slide_bodies: List[str] | None = None,
         story_post: Dict[str, Any] | None = None,
+        user_image_urls: Optional[List[str]] = None,
     ) -> List[Path]:
         cfg = get_config()
         strict_gemini_publish = (os.getenv("REQUIRE_GEMINI_FOR_PUBLISH", "1") or "1").strip().lower() not in ("0", "false", "no")
@@ -106,6 +107,7 @@ class CarouselImageGenerator:
                     post_template=post_template,
                     slide_bodies=slide_bodies,
                     story_post=story_post,
+                    reference_images=user_image_urls,
                 )
                 if paths:
                     return [Path(p) for p in paths]

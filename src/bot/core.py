@@ -121,7 +121,8 @@ def generate_custom_previews(description: str, user_image_urls: List[str]) -> Li
                 out_dir=out_dir,
                 topic_title=description[:50],
                 cover_headline=captions[i],
-                visual_prompts=[prompts[i]]
+                visual_prompts=[prompts[i]],
+                user_image_urls=user_image_urls
             )
             media_urls = [CloudinaryUploader.upload_file(str(p)) for p in media_paths]
             

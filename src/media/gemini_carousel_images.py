@@ -212,6 +212,7 @@ def _generate_slide_pil(
     *,
     aspect_ratio: str,
     image_size: str | None,
+    img_parts: Optional[List[types.Part]] = None,
 ) -> Image.Image:
     image_cfg_kw: dict = {"aspect_ratio": aspect_ratio}
     if image_size:
@@ -220,9 +221,14 @@ def _generate_slide_pil(
         response_modalities=["IMAGE"],
         image_config=types.ImageConfig(**image_cfg_kw),
     )
+    
+    # Multimodal list: [Images...] + [Text Prompt]
+    parts = list(img_parts) if img_parts else []
+    parts.append(types.Part.from_text(text=prompt))
+    
     response = client.models.generate_content(
         model=model_id,
-        contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
+        contents=[types.Content(role="user", parts=parts)],
         config=config,
     )
     img = _extract_image_from_response(response)
@@ -249,7 +255,6 @@ def _hex_to_rgb(hex_str: str) -> tuple[int, int, int]:
         return (56, 189, 248)
     return tuple(int(s[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[misc]
 
-
 def try_render_gemini_carousel(
     cfg: AppConfig,
     slug: str,
@@ -264,6 +269,7 @@ def try_render_gemini_carousel(
     profile_path: str = "",
     story_post: Optional[Dict[str, Any]] = None,
     slide_bodies: Optional[Sequence[str]] = None,
+    reference_images: Optional[Sequence[str]] = None,
 ) -> Optional[List[str]]:
     """
     Render carousel JPEGs via Gemini + compositor.
@@ -271,16 +277,28 @@ def try_render_gemini_carousel(
     Default: cinematic background (no text in model) + PIL headline band (scroll-stopping template).
     Set IMAGE_RENDER_MODE=arxiv_integrated for the older in-image 3D typography path.
 
-    overlay_texts, if provided, overrides slide_texts (legacy).
-    profile_path is ignored.
-    story_post: optional full post dict for `ensure_story_brief` (topic, slides, sources, ...).
-    slide_bodies: optional long-form slide copy (aligned with poster headlines); feeds strategist + detail slates.
+    reference_images: optional list of URLs to use as visual context for Image-to-Image generation.
     """
     _ = (post_template, profile_path)
     api_key = (getattr(cfg, "gemini_api_key", None) or os.getenv("GEMINI_API_KEY") or "").strip()
     if not api_key:
         log_stage(_LOG, "gemini_carousel_skip", "skipped", extra={"slug": slug, "reason": "no_api_key"})
         return None
+
+    # Load multimodal parts if reference images exist (Custom Post flow)
+    img_parts: List[types.Part] = []
+    if reference_images:
+        import urllib.request
+        for url in reference_images[:5]:
+            try:
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req) as resp:
+                    img_data = resp.read()
+                    img_parts.append(types.Part.from_bytes(data=img_data, mime_type="image/jpeg"))
+            except Exception as e:
+                _LOG.warning("gemini_carousel_ref_skip url=%s err=%s", url, e)
+
 
     texts = list(overlay_texts if overlay_texts is not None else slide_texts)
     if not texts:
@@ -438,6 +456,7 @@ def try_render_gemini_carousel(
                     prompt,
                     aspect_ratio=aspect,
                     image_size=image_size,
+                    img_parts=img_parts if img_parts else None,
                 )
                 if raw is not None:
                     break
