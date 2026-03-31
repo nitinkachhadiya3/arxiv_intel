@@ -25,6 +25,7 @@ _SOURCE_ORDER = [
     "rss",
     "hf_paper",
     "google_trends",
+    "ipl",
     "hf_model",
     "gemini_fresh",
 ]
@@ -131,6 +132,10 @@ def _fetch_from_source(source: str) -> Optional[Dict[str, Any]]:
         from src.ingestion.hf_ingestor import pick_best_hf_topic
         subtype = "model" if source == "hf_model" else "space"
         return pick_best_hf_topic(subtype)
+
+    elif source == "ipl":
+        from src.ingestion.cricket_ingestor import pick_best_cricket_topic
+        return pick_best_cricket_topic()
 
     elif source == "gemini_fresh":
         return _fetch_gemini_fresh()
