@@ -33,14 +33,18 @@ def generate_content(description: str, image_urls: List[str], category: str = "A
                 print(f"  ⚠ Failed to download context image {url}: {e}")
 
         parts.append(types.Part.from_text(text=(
-            f"You are a premium AI tech content creator. A user has provided a description: '{description}' "
-            f"and {len(image_urls)} images for context. "
-            f"The category is '{category}'.\n\n"
-            f"Task: Generate {draft_count} distinct draft versions for an Instagram carousel post. "
+            f"You are a premium AI tech content creator and image stylist. A user has provided a description: '{description}' "
+            f"and {len(image_urls)} images for context which should be treated as a Visual Reference/Screenshot.\n\n"
+            f"Task: Analyze the 'Visual DNA' of the provided images (subject, style, layout, tone). "
+            f"Generate {draft_count} distinct 'REMIXED' draft versions for an Instagram carousel post. "
+            f"The goal is to keep the same context/topic as the reference but provide a 'Better Angle', 'Premium Visuals', and 'Superior Content'.\n\n"
             f"Each version needs:\n"
-            f"1. A catchy description/caption (max 150 chars).\n"
-            f"2. A highly detailed image generation prompt for a futuristic tech illustration "
-            f"that captures the essence of the user's input but in a different, more professional view.\n\n"
+            f"1. A catchy description/caption (max 150 chars) that focus on 'Earning Attention' through better storytelling.\n"
+            f"2. A highly detailed image generation prompt. IMPORTANT RULES FOR IMAGE PROMPT:\n"
+            f"   - Use the reference images as a style/composition guide but elevate it to 'Professional Cinematic' quality.\n"
+            f"   - If the references feature humans, your prompt MUST explicitly specify creating highly realistic, photorealistic human subjects that match the styling and vibe.\n"
+            f"   - Otherwise, default to a high-end futuristic tech illustration that is better than the original.\n"
+            f"   - The prompt should vividly capture the essence of the user's input in a highly professional view.\n\n"
             f"Return ONLY a JSON array of objects with keys 'caption' and 'image_prompt'."
         )))
 

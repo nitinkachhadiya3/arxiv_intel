@@ -1,49 +1,35 @@
 import os
-import sys
-import uuid
-from pathlib import Path
-
-# Add project root to sys.path
-root = Path(__file__).resolve().parent.parent
-sys.path.append(str(root))
-
+import asyncio
 from dotenv import load_dotenv
-load_dotenv(root / ".env", override=True)
 
-from src.bot.core import generate_custom_previews
-from src.bot.state import state
+# Load environment to ensure GEMINI_API_KEY is available
+load_dotenv(".env")
 
-def test_human_vision():
-    print(f"�� Starting Human Vision Test...")
-    
-    # Input description and reference image
-    description = "A successful tech founder in a sleek corporate office, looking confident."
-    # Using a professional-looking portrait from Unsplash
-    image_urls = ["https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=600&auto=format&fit=crop"]
-    
-    print(f"✍️ Description: {description}")
-    print(f"📸 Reference Image: {image_urls[0]}")
-    
-    try:
-        # This will trigger Gemini Vision -> Image Generation
-        drafts = generate_custom_previews(description, image_urls)
-        
-        print(f"✅ Successfully generated {len(drafts)} draft(s).")
-        
-        for i, draft in enumerate(drafts, 1):
-            print(f"\n--- Draft {i} ---")
-            print(f"UUID: {draft['uuid']}")
-            print(f"Caption: {draft['caption']}")
-            print(f"Media URLs:")
-            for url in draft['media_urls']:
-                print(f"  🔗 {url}")
-                
-        print("\n✨ VISION TEST SUCCESSFUL.")
-        
-    except Exception as e:
-        print(f"❌ Vision Test Failed: {str(e)}")
-        import traceback
-        traceback.print_exc()
+from src.bot.llm_helper import generate_content
 
-if __name__ == '__main__':
-    test_human_vision()
+def run_test():
+    # A reference of a high-end tech workspace/lifestyle shot
+    test_image_url = "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80"
+    description = "Remix this minimalist tech setup. I want the same vibe but more cinematic and with better lighting."
+    
+    print(f"Testing Gemini AI REMIXER (Custom Post)...")
+    print(f"User Description/Request: {description}")
+    print(f"Reference Image URL: {test_image_url}")
+    print("-" * 50)
+    
+    # We pass category "AI/Tech" and just generate 1 draft for testing
+    captions, prompts = generate_content(
+        description=description,
+        image_urls=[test_image_url],
+        category="Tech Lifestyle",
+        draft_count=1
+    )
+    
+    print("RESULTS:")
+    for i in range(len(captions)):
+        print(f"\nDraft {i+1}:")
+        print(f"CAPTION: {captions[i]}")
+        print(f"PROMPT:  {prompts[i]}")
+
+if __name__ == "__main__":
+    run_test()
