@@ -456,7 +456,7 @@ def try_render_gemini_carousel(
                     prompt,
                     aspect_ratio=aspect,
                     image_size=image_size,
-                    img_parts=(img_parts if i == 1 else None),
+                    img_parts=img_parts if img_parts else None,
                 )
                 if raw is not None:
                     break

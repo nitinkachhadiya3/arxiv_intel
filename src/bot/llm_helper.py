@@ -35,16 +35,18 @@ def generate_content(description: str, image_urls: List[str], category: str = "A
         parts.append(types.Part.from_text(text=(
             f"You are a premium AI tech content creator and image stylist. A user has provided a description: '{description}' "
             f"and {len(image_urls)} images for context which should be treated as a Visual Reference/Screenshot.\n\n"
-            f"Task: Analyze the 'Visual DNA' of the provided images (subject, style, layout, tone). "
-            f"Generate {draft_count} distinct 'REMIXED' draft versions for an Instagram carousel. "
-            f"The goal is to keep the same context/topic as the reference but provide a 'Hero Remix' on Slide 1 followed by 'Value Content' slides.\n\n"
-            f"EACH draft version MUST contain 3 to 5 slides:\n"
-            f"- SLIDE 1 (HERO REMIX): A professional, direct remix of the visual DNA of the provided reference. Treat this as the hook.\n"
-            f"- SLIDES 2-5 (CONTENT): Informative/Value-adding slides that expand on the user's description with tips, insights, or details.\n\n"
+            f"Task: Analyze the 'Visual DNA' and specific narrative details of the provided images. "
+            f"Generate {draft_count} distinct 'DEEP REMIX' draft versions for an Instagram carousel.\n\n"
+            f"CRITICAL RULES:\n"
+            f"- DO NOT use generic AI tips, static templates, or placeholder tech advice.\n"
+            f"- EVERY slide (1-5) must be deeply dependent on the provided reference images.\n"
+            f"- The entire carousel must tell a cohesive story derived EXCLUSIVELY from the subjects, style, layout, and context found in your visual analysis of the provided photos.\n"
+            f"- Treat the user's description as a 'Director's Note' to guide how you remix the original reference into a fresh 5-slide narrative.\n\n"
+            f"EACH draft version MUST contain 5 slides:\n"
             f"For each slide, provide:\n"
-            f"1. A catchy caption (max 150 chars).\n"
-            f"2. A highly detailed image generation prompt. Rule: Slide 1 MUST focus on the reference style. Slides 2-5 can be consistent or supplementary.\n\n"
-            f"Return ONLY a JSON array of objects, one for each draft version. Each object must have a 'slides' key containing its list of slide objects with keys 'caption' and 'image_prompt'."
+            f"1. A catchy caption (max 150 chars) that is a part of the reference-dependent story.\n"
+            f"2. A highly detailed image generation prompt. Rule: Every slide's prompt must inherit the visual style and subject matter of the reference while providing a new perspective or angle.\n\n"
+            f"Return ONLY a JSON array of objects, one for each draft version. Each object must have a 'slides' key containing its list of 5 slide objects with keys 'caption' and 'image_prompt'."
         )))
 
         resp = client.models.generate_content(
