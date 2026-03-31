@@ -43,3 +43,31 @@ For automated environments that need a smart scheduler process, you can use the 
 ```bash
 ./start_production.sh
 ```
+
+---
+
+## 🚀 Deployment on Render (Free Tier)
+
+This repository is optimized for deployment on **Render's Free Web Service**.
+
+### 1. Environment Variable Configuration
+Set the following variables in your Render Dashboard:
+
+| Variable | Description | Value |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | Your Google Gemini API Key | `AIza...` |
+| `TELEGRAM_BOT_TOKEN` | Your Telegram Bot Token | `12345:ABC...` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary Name | `dsoq...` |
+| `CLOUDINARY_KEY` | Cloudinary API Key | `...` |
+| `CLOUDINARY_SECRET` | Cloudinary API Secret | `...` |
+| `BOT_MODE` | Bot Mode | `webhook` |
+| `WEBHOOK_URL` | Your App URL | `https://your-app-name.onrender.com` |
+
+### 2. Render Deployment Settings
+- **Runtime**: Python 3
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `chmod +x render_start.sh && ./render_start.sh`
+
+> [!TIP]
+> **Free Tier Hibernate**: Render Free Tier Web Services sleep after 15 minutes of inactivity. The first time you message the bot after a long break, it may take ~30 seconds to wake up and respond.
+

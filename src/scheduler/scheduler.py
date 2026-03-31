@@ -168,3 +168,11 @@ class JobScheduler:
                 print(f"  😴 No remaining slots for {today_str}. Sleeping until tomorrow...")
                 time.sleep(300)
 
+if __name__ == "__main__":
+    from src.bot.config import Config
+    try:
+        Config.validate()
+        scheduler = JobScheduler(Config)
+        scheduler.run_forever()
+    except Exception as e:
+        print(f"❌ Scheduler startup failed: {e}")
