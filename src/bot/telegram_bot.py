@@ -126,6 +126,7 @@ def main():
             logger.error("BOT_MODE is set to 'webhook' but WEBHOOK_URL is missing.")
             return
         
+        webhook_url = webhook_url.rstrip("/")
         logger.info(f"Starting bot in WEBHOOK mode at {webhook_url}")
         # In a real deployment, you'd specify listen address and port here
         app.run_webhook(
