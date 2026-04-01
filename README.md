@@ -7,17 +7,19 @@
 
 ## Environment Setup (.env)
 
-The bot requires a `.env` file for all configuration. Below is the full list of variables utilized across the codebase:
+The bot requires a `.env` file for all configuration. Below is the exhaustive list of all variables utilized across the codebase:
 
 | Category | Variable | Description | Documentation / Source |
 | --- | --- | --- | --- |
 | **Generative AI** | `GEMINI_API_KEY` | Google Gemini API Key | [AI Studio](https://aistudio.google.com/app/apikey) |
-| | `GEMINI_MODEL` | Strategist Model (Default: `gemini-3.1-flash-lite-preview`) | [Model List](https://ai.google.dev/gemini-api/docs/models/gemini) |
-| | `GEMINI_MODEL_FALLBACK` | Fallback Model (`gemini-2.5-pro`) | - |
+| | `GEMINI_MODEL` | Strategist Model (e.g. `gemini-3.1-flash-lite-preview`) | [Models](https://ai.google.dev/gemini-api/docs/models/gemini) |
 | | `GEMINI_IMAGE_MODEL` | Visual Generator (`gemini-3.1-flash-image-preview`) | - |
+| | `GEMINI_IMAGE_ASPECT_RATIO`| Image ratio (`3:4`, `1:1`, `9:16`) | - |
 | **Telegram** | `TELEGRAM_BOT_TOKEN` | Bot API Token | [@BotFather](https://t.me/BotFather) |
 | | `TELEGRAM_CHAT_ID` | Your channel or group ID | - |
 | | `BOT_MODE` | `polling` (dev) or `webhook` (production) | - |
+| | `WEBHOOK_URL` | **Required for webhook mode** | [Telegram Webhooks](https://core.telegram.org/bots/webhooks) |
+| | `PORT` | Port for webhook listener (default: `8443`) | - |
 | **Cloudinary** | `CLOUDINARY_CLOUD_NAME`| Cloudinary Cloud Name | [Console](https://cloudinary.com/console) |
 | | `CLOUDINARY_KEY` | Cloudinary API Key | - |
 | | `CLOUDINARY_SECRET` | Cloudinary API Secret | - |
@@ -26,12 +28,15 @@ The bot requires a `.env` file for all configuration. Below is the full list of 
 | | `META_APP_ID` | Meta App ID | - |
 | | `META_APP_SECRET` | Meta App Secret | - |
 | **Optional Social** | `FACEBOOK_PAGE_ID` | Linked FB Page ID | - |
+| | `FACEBOOK_PAGE_ACCESS_TOKEN`| Token with `pages_manage_posts` | - |
 | | `LINKEDIN_ORGANIZATION_ID`| LinkedIn Org URN | - |
-| | `X_TWITTER_USERNAME` | X Handle | - |
+| | `X_BEARER_TOKEN` | Twitter Bearer Token | - |
 | **Internal Bot** | `IMAGE_RENDER_MODE` | `cinematic_overlay` (Modern) or `arxiv_integrated` (3D) | - |
 | | `BRAND_NAME` | Global label on slides | - |
 | | `CONTENT_CATEGORY` | Primary vertical (e.g. `technology`, `ipl`) | - |
 | | `STORY_MAX_SLIDES` | Max slides per post | - |
+| | `STORY_STRATEGIST_ENABLED`| Toggle AI Strategist (Default: `1`) | - |
+| | `REQUIRE_GEMINI_FOR_PUBLISH`| Validate output before posting (Default: `1`) | - |
 
 ## Installation
 
