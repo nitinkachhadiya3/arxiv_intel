@@ -44,8 +44,8 @@ def generate_content(description: str, image_urls: List[str], category: str = "A
             f"- Treat the user's description as a 'Director's Note' to guide how you remix the original reference into a fresh 5-slide narrative.\n\n"
             f"EACH draft version MUST contain 5 slides:\n"
             f"For each slide, provide:\n"
-            f"1. A catchy caption (max 150 chars) that is a part of the reference-dependent story.\n"
-            f"2. A highly detailed image generation prompt. Rule: Every slide's prompt must inherit the visual style and subject matter of the reference while providing a new perspective or angle.\n\n"
+            f"1. A catchy caption (max 150 chars). On the FINAL slide, append a minimum of 15-20 relevant hashtags (e.g. #AI #Tech #Innovation...).\n"
+            f"2. A highly detailed Visual Action Hint (e.g. 'A technical founder looking out a window at a futuristic city' or 'Macro detail of a glowing microprocessor'). This hint will be mapped to a professional cinematic visual world. Rule: Every slide's visual hint must inherit the style of the provided reference while providing a new perspective.\n\n"
             f"Return ONLY a JSON array of objects, one for each draft version. Each object must have a 'slides' key containing its list of 5 slide objects with keys 'caption' and 'image_prompt'."
         )))
 
