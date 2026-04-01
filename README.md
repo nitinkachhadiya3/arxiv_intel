@@ -23,8 +23,9 @@ The bot requires a `.env` file for all configuration. Below is the exhaustive li
 | **Cloudinary** | `CLOUDINARY_CLOUD_NAME`| Cloudinary Cloud Name | [Cloudinary Dashboard](https://cloudinary.com/console) |
 | | `CLOUDINARY_KEY` | Cloudinary API Key | [API Key Guide](https://cloudinary.com/documentation/cloudinary_credentials_tutorial) |
 | | `CLOUDINARY_SECRET` | Cloudinary API Secret | [Security Best Practices](https://cloudinary.com/documentation/admin_api#authentication) |
-| **Meta / Instagram** | `INSTAGRAM_ACCESS_TOKEN`| Long-lived system token | [Meta Getting Started](https://developers.facebook.com/docs/instagram-api/getting-started) |
-| | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business ID | [IG User Reference](https://developers.facebook.com/docs/instagram-api/reference/ig-user) |
+| **Meta / Instagram** | [Setup Guide](docs/meta_setup.md) | **See docs/meta_setup.md for step-by-step IDs & Token guide.** | - |
+| | `INSTAGRAM_ACCESS_TOKEN`| Long-lived system token | [Meta Apps](https://developers.facebook.com/apps/) |
+| | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business ID | [Graph API Docs](https://developers.facebook.com/docs/instagram-api/) |
 | | `INSTAGRAM_USERNAME` | Instagram Username | [Profile Lookup](https://developers.facebook.com/docs/instagram-api/reference/ig-user) |
 | | `META_APP_ID` | Meta Application ID | [App Dashboard](https://developers.facebook.com/apps/) |
 | | `META_APP_SECRET` | Meta Application Secret | [App Settings](https://developers.facebook.com/apps/) |
