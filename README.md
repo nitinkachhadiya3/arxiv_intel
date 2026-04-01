@@ -7,32 +7,35 @@
 
 ## Environment Setup (.env)
 
-The bot relies on a `.env` file for all configurations. Below is the comprehensive list of required and optional parameters:
+The bot requires a `.env` file for all configuration. Below is the full list of variables utilized across the codebase:
 
-| Category | Variable | Description | Default |
+| Category | Variable | Description | Documentation / Source |
 | --- | --- | --- | --- |
-| **Core AI** | `GEMINI_API_KEY` | Google Gemini API Key (Required) | - |
-| | `GEMINI_IMAGE_MODEL` | Gemini Image Model (e.g. `gemini-2.0-flash-exp`) | `gemini-2.0-flash-exp` |
-| | `GEMINI_IMAGE_ASPECT_RATIO` | Generation aspect ratio (`3:4`, `1:1`, `9:16`) | `3:4` |
-| **Telegram** | `TELEGRAM_BOT_TOKEN` | Bot API Token from @BotFather (Required) | - |
-| | `TELEGRAM_CHAT_ID` | Main chat ID for auto-posting | - |
-| | `BOT_MODE` | `polling` (dev) or `webhook` (production) | `polling` |
-| | `WEBHOOK_URL` | App URL for webhook mode | - |
-| **Cloudinary** | `CLOUDINARY_CLOUD_NAME`| Cloudinary Cloud Name (Required) | - |
+| **Generative AI** | `GEMINI_API_KEY` | Google Gemini API Key | [AI Studio](https://aistudio.google.com/app/apikey) |
+| | `GEMINI_MODEL` | Strategist Model (Default: `gemini-3.1-flash-lite-preview`) | [Model List](https://ai.google.dev/gemini-api/docs/models/gemini) |
+| | `GEMINI_MODEL_FALLBACK` | Fallback Model (`gemini-2.5-pro`) | - |
+| | `GEMINI_IMAGE_MODEL` | Visual Generator (`gemini-3.1-flash-image-preview`) | - |
+| **Telegram** | `TELEGRAM_BOT_TOKEN` | Bot API Token | [@BotFather](https://t.me/BotFather) |
+| | `TELEGRAM_CHAT_ID` | Your channel or group ID | - |
+| | `BOT_MODE` | `polling` (dev) or `webhook` (production) | - |
+| **Cloudinary** | `CLOUDINARY_CLOUD_NAME`| Cloudinary Cloud Name | [Console](https://cloudinary.com/console) |
 | | `CLOUDINARY_KEY` | Cloudinary API Key | - |
 | | `CLOUDINARY_SECRET` | Cloudinary API Secret | - |
-| **Instagram** | `INSTAGRAM_ACCESS_TOKEN`| Long-lived access token for Meta API | - |
-| | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business Account ID | - |
-| **Strategy** | `IMAGE_RENDER_MODE` | `cinematic_overlay` (Modern) or `arxiv_integrated` (3D) | `cinematic_overlay` |
-| | `BRAND_NAME` | Global brand label on slides | `ArXiv Intel` |
-| | `CONTENT_CATEGORY` | Primary vertical (e.g. `technology`, `ipl`) | `technology` |
-| | `PROFILE_LOGO_MODE` | `mark` (Subtle) or `tree` (Bold) | `mark` |
-| | `STORY_MAX_SLIDES` | Max slides per carousel | `6` |
-| | `CUSTOM_POST_DRAFT_COUNT`| Number of drafts to generate for custom prompts | `2` |
+| **Meta / Instagram** | `INSTAGRAM_ACCESS_TOKEN`| Long-lived system token | [Meta Apps](https://developers.facebook.com/apps/) |
+| | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business ID | [Graph API Docs](https://developers.facebook.com/docs/instagram-api/) |
+| | `META_APP_ID` | Meta App ID | - |
+| | `META_APP_SECRET` | Meta App Secret | - |
+| **Optional Social** | `FACEBOOK_PAGE_ID` | Linked FB Page ID | - |
+| | `LINKEDIN_ORGANIZATION_ID`| LinkedIn Org URN | - |
+| | `X_TWITTER_USERNAME` | X Handle | - |
+| **Internal Bot** | `IMAGE_RENDER_MODE` | `cinematic_overlay` (Modern) or `arxiv_integrated` (3D) | - |
+| | `BRAND_NAME` | Global label on slides | - |
+| | `CONTENT_CATEGORY` | Primary vertical (e.g. `technology`, `ipl`) | - |
+| | `STORY_MAX_SLIDES` | Max slides per post | - |
 
 ## Installation
 
-Activate your virtual environment and install the dependencies:
+Activate your virtual environment and install dependencies:
 
 ```bash
 # Create and activate a virtual environment
