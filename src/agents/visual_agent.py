@@ -532,23 +532,67 @@ class VisualAgent:
         self, world: Dict[str, Any], scene_hint: str, match_data: Dict
     ) -> str:
         """
-        Combine world cinematic template + scene-specific hint + composition rules.
+        Build a DYNAMIC cinematic prompt using:
+          - The world template as a STYLE REFERENCE (camera, lighting, mood)
+          - The actual match data for CONTENT (players, venue, teams, action)
+
+        The 24 visual worlds are NOT static templates — they define the
+        cinematographic DNA (angle, lens, mood) while the scene content
+        is freshly composed from live match context every single time.
         """
         venue = match_data.get("venue", "an IPL stadium")
-        return f"""Scene: {scene_hint}
-Venue: {venue}
+        hero = match_data.get("hero_player", {})
+        hero_name = hero.get("name", "the star player")
+        hero_team = hero.get("team", "")
+        performers = match_data.get("key_performers", [])
+        score = match_data.get("current_score", {}).get("team", "")
+        crowd_mood = match_data.get("crowd_mood", "electric")
+        phase = match_data.get("match_phase", "")
 
-CINEMATIC VISUAL DIRECTION:
+        # Extract team names for jersey color context
+        teams = match_data.get("teams", {})
+        team1 = teams.get("team1", "Home Team")
+        team2 = teams.get("team2", "Away Team")
+
+        # Build performer descriptions for context
+        performer_details = ""
+        if performers:
+            top_3 = performers[:3]
+            performer_details = " | ".join(
+                f"{p['name']} ({p.get('team','')}: {p.get('stat','')})"
+                for p in top_3
+            )
+
+        return f"""SCENE (content-specific, from live match data):
+{scene_hint}
+
+MATCH CONTEXT (inject these real details into the visual):
+- Hero Player: {hero_name} (#{hero.get('jersey_number', '??')}, {hero_team})
+- Venue: {venue}
+- Teams: {team1} vs {team2}
+- Score: {score}
+- Phase: {phase}
+- Crowd Mood: {crowd_mood}
+- Key Performers: {performer_details}
+
+STYLE REFERENCE (from visual world '{world['name']}'):
 {world['prompt']}
 
-Mood: {world['mood']}
+MOOD & ATMOSPHERE: {world['mood']}
 
-COMPOSITION RULE: Main action in the upper 65% of the frame.
-Bottom 30% must be dark and relatively clean for text overlay.
+DYNAMIC GENERATION RULES:
+1. Use the SCENE description as the PRIMARY subject — do NOT default to generic cricket stock imagery.
+2. Jersey must match the real team ({team1} vs {team2}) — render authentic IPL team branding.
+3. Player faces must look like real, specific individuals — NOT generic models.
+4. The venue must be recognizable as {venue} — capture its architectural character.
+5. Every generation must feel UNIQUE — vary the camera angle, lighting direction, and crop.
+6. Use the Style Reference for cinematographic DNA (lens, exposure, color grade) ONLY.
 
-OUTPUT: Ultra-realistic 8k sports photograph. NOT a cartoon, NOT an illustration.
-Looks like a professional ESPN / Getty Images sports photo from IPL 2026.
-Authentic player jerseys, real stadium environment, no generic stock imagery."""
+COMPOSITION: Main action in the upper 65%. Bottom 30% darker for text overlay.
+
+OUTPUT FORMAT: Ultra-realistic 8k sports photograph from IPL 2026.
+Professional ESPN / Getty Images / AP wire quality.
+NO cartoon. NO illustration. NO AI-looking imagery. PURE photorealism."""
 
     @staticmethod
     def get_world_by_keyword(keyword: str) -> Optional[Dict[str, Any]]:
@@ -556,3 +600,4 @@ Authentic player jerseys, real stadium environment, no generic stock imagery."""
         if wid:
             return next((w for w in SPORTS_WORLDS if w["id"] == wid), None)
         return None
+
