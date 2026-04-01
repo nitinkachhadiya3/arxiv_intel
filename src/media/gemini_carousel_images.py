@@ -348,7 +348,8 @@ def try_render_gemini_carousel(
     title_fonts = list(brand.get("font_title_candidates", []))
     body_fonts = list(brand.get("font_body_candidates", []))
     handle = str(brand.get("instagram_handle", "") or "").strip()
-    logo_path = str(brand.get("logo_path", "") or "").strip()
+    # Prioritize environment variable over hardcoded JSON path for portability
+    logo_path = os.getenv("PROFILE_LOGO_PATH") or str(brand.get("logo_path", "") or "").strip()
 
     aspect = _aspect_ratio_for_request(cfg)
     image_size = _image_size_for_request(cfg)
