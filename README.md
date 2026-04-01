@@ -25,6 +25,7 @@ The bot requires a `.env` file for all configuration. Below is the exhaustive li
 | | `CLOUDINARY_SECRET` | Cloudinary API Secret | - |
 | **Meta / Instagram** | `INSTAGRAM_ACCESS_TOKEN`| Long-lived system token | [Meta Apps](https://developers.facebook.com/apps/) |
 | | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business ID | [Graph API Docs](https://developers.facebook.com/docs/instagram-api/) |
+| | `INSTAGRAM_USERNAME` | Instagram Username | - |
 | | `META_APP_ID` | Meta App ID | - |
 | | `META_APP_SECRET` | Meta App Secret | - |
 | **Optional Social** | `FACEBOOK_PAGE_ID` | Linked FB Page ID | - |
