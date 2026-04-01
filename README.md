@@ -7,37 +7,37 @@
 
 ## Environment Setup (.env)
 
-The bot requires a `.env` file for all configuration. Below is the exhaustive list of all variables utilized across the codebase:
+The bot requires a `.env` file for all configuration. Below is the exhaustive list of all variables utilized across the codebase with official setup links:
 
-| Category | Variable | Description | Documentation / Source |
+| Category | Variable | Description | Official Documentation / Setup Link |
 | --- | --- | --- | --- |
-| **Generative AI** | `GEMINI_API_KEY` | Google Gemini API Key | [AI Studio](https://aistudio.google.com/app/apikey) |
-| | `GEMINI_MODEL` | Strategist Model (e.g. `gemini-3.1-flash-lite-preview`) | [Models](https://ai.google.dev/gemini-api/docs/models/gemini) |
-| | `GEMINI_IMAGE_MODEL` | Visual Generator (`gemini-3.1-flash-image-preview`) | - |
-| | `GEMINI_IMAGE_ASPECT_RATIO`| Image ratio (`3:4`, `1:1`, `9:16`) | - |
-| **Telegram** | `TELEGRAM_BOT_TOKEN` | Bot API Token | [@BotFather](https://t.me/BotFather) |
-| | `TELEGRAM_CHAT_ID` | Your channel or group ID | - |
-| | `BOT_MODE` | `polling` (dev) or `webhook` (production) | - |
-| | `WEBHOOK_URL` | **Required for webhook mode** | [Telegram Webhooks](https://core.telegram.org/bots/webhooks) |
-| | `PORT` | Port for webhook listener (default: `8443`) | - |
-| **Cloudinary** | `CLOUDINARY_CLOUD_NAME`| Cloudinary Cloud Name | [Console](https://cloudinary.com/console) |
-| | `CLOUDINARY_KEY` | Cloudinary API Key | - |
-| | `CLOUDINARY_SECRET` | Cloudinary API Secret | - |
-| **Meta / Instagram** | `INSTAGRAM_ACCESS_TOKEN`| Long-lived system token | [Meta Apps](https://developers.facebook.com/apps/) |
-| | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business ID | [Graph API Docs](https://developers.facebook.com/docs/instagram-api/) |
-| | `INSTAGRAM_USERNAME` | Instagram Username | - |
-| | `META_APP_ID` | Meta App ID | - |
-| | `META_APP_SECRET` | Meta App Secret | - |
-| **Optional Social** | `FACEBOOK_PAGE_ID` | Linked FB Page ID | - |
-| | `FACEBOOK_PAGE_ACCESS_TOKEN`| Token with `pages_manage_posts` | - |
-| | `LINKEDIN_ORGANIZATION_ID`| LinkedIn Org URN | - |
-| | `X_BEARER_TOKEN` | Twitter Bearer Token | - |
-| **Internal Bot** | `IMAGE_RENDER_MODE` | `cinematic_overlay` (Modern) or `arxiv_integrated` (3D) | - |
+| **Generative AI** | `GEMINI_API_KEY` | Google Gemini API Key | [Get API Key](https://aistudio.google.com/app/apikey) |
+| | `GEMINI_MODEL` | Strategist Model name | [Model Documentation](https://ai.google.dev/gemini-api/docs/models/gemini) |
+| | `GEMINI_IMAGE_MODEL` | Visual Generator name | [Image Generation Guide](https://ai.google.dev/gemini-api/docs/imagen) |
+| | `GEMINI_IMAGE_ASPECT_RATIO`| Image ratio (`3:4`, `1:1`) | [Aspect Ratio Support](https://ai.google.dev/gemini-api/docs/imagen#aspect-ratio) |
+| **Telegram** | `TELEGRAM_BOT_TOKEN` | Bot API Token | [@BotFather Guide](https://core.telegram.org/bots/tutorial#obtain-api-token) |
+| | `TELEGRAM_CHAT_ID` | Your channel or group ID | [Get Chat ID Utility](https://t.me/getmyid_bot) |
+| | `BOT_MODE` | `polling` (dev) or `webhook` | [Running Modes](https://core.telegram.org/bots/webhooks) |
+| | `WEBHOOK_URL` | **Required for webhook mode** | [Webhooks Tutorial](https://core.telegram.org/bots/webhooks#setting-a-webhook) |
+| | `PORT` | Webhook listener port | [Server Configuration](https://render.com/docs/deploy-python) |
+| **Cloudinary** | `CLOUDINARY_CLOUD_NAME`| Cloudinary Cloud Name | [Cloudinary Dashboard](https://cloudinary.com/console) |
+| | `CLOUDINARY_KEY` | Cloudinary API Key | [API Key Guide](https://cloudinary.com/documentation/cloudinary_credentials_tutorial) |
+| | `CLOUDINARY_SECRET` | Cloudinary API Secret | [Security Best Practices](https://cloudinary.com/documentation/admin_api#authentication) |
+| **Meta / Instagram** | `INSTAGRAM_ACCESS_TOKEN`| Long-lived system token | [Meta Getting Started](https://developers.facebook.com/docs/instagram-api/getting-started) |
+| | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business ID | [IG User Reference](https://developers.facebook.com/docs/instagram-api/reference/ig-user) |
+| | `INSTAGRAM_USERNAME` | Instagram Username | [Profile Lookup](https://developers.facebook.com/docs/instagram-api/reference/ig-user) |
+| | `META_APP_ID` | Meta Application ID | [App Dashboard](https://developers.facebook.com/apps/) |
+| | `META_APP_SECRET` | Meta Application Secret | [App Settings](https://developers.facebook.com/apps/) |
+| **Optional Social** | `FACEBOOK_PAGE_ID` | Linked FB Page ID | [FB Page Reference](https://developers.facebook.com/docs/graph-api/reference/page/) |
+| | `FACEBOOK_PAGE_ACCESS_TOKEN`| Page-specific token | [Page Tokens Guide](https://developers.facebook.com/docs/pages/access-tokens) |
+| | `LINKEDIN_ORGANIZATION_ID`| LinkedIn Org URN | [LinkedIn Org Lookup](https://learn.microsoft.com/en-us/linkedin/marketing/integrations/community-management/organizations/organization-lookup-api) |
+| | `X_BEARER_TOKEN` | Twitter Bearer Token | [X Dev Portal](https://developer.twitter.com/en/docs/twitter-api/getting-started/getting-access-to-the-twitter-api) |
+| **Internal Bot** | `IMAGE_RENDER_MODE` | `cinematic_overlay` (Modern) | - |
 | | `BRAND_NAME` | Global label on slides | - |
-| | `CONTENT_CATEGORY` | Primary vertical (e.g. `technology`, `ipl`) | - |
+| | `CONTENT_CATEGORY` | Primary vertical (e.g. `ipl`) | - |
 | | `STORY_MAX_SLIDES` | Max slides per post | - |
-| | `STORY_STRATEGIST_ENABLED`| Toggle AI Strategist (Default: `1`) | - |
-| | `REQUIRE_GEMINI_FOR_PUBLISH`| Validate output before posting (Default: `1`) | - |
+| | `STORY_STRATEGIST_ENABLED`| Toggle AI Strategist | - |
+| | `REQUIRE_GEMINI_FOR_PUBLISH`| Validate output | - |
 
 ## Running Modes
 
