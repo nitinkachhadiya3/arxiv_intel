@@ -27,6 +27,7 @@ from src.media.editorial_compositor import (
     compose_cinematic_blueprint_slide,
     compose_cinematic_news_slide,
     compose_editorial_slide,
+    compose_sports_stats_slide,
 )
 from src.media.image_generator import save_rgb_jpeg_under_limit
 from src.utils.config import AppConfig
@@ -86,6 +87,24 @@ def image_render_mode() -> str:
     return "cinematic_overlay"
 
 
+_CRICKET_PERSONAS = {
+    "ponting": "An authoritative older Australian cricket coach in a professional team dugout, short greyish hair, intense expression, wearing a team polo shirt and holding a tactical clipboard.",
+    "kohli": "A bearded, intense elite Indian batsman in a dark blue and gold jersey, focused expression, athletic build, wearing a professional cricket helmet, mid-action.",
+    "dhoni": "A legendary calm Indian wicketkeeper with salt-and-pepper hair, wearing a yellow jersey, focused behind the stumps, professional sports atmosphere.",
+    "rohit": "A seasoned Indian opening batsman with a short beard, wearing a blue jersey, confident stance, professional cricket atmosphere.",
+    "hardik": "A stylish, athletic all-rounder with short faded hair, wearing a blue and gold jersey, intense expression, dynamic sports pose.",
+    "kl rahul": "A focused Indian batsman with a short beard, wearing a maroon and gold jersey, elegant batting stance.",
+}
+
+def _apply_persona_descriptions(topic: str, prompt: str) -> str:
+    """Detect famous names and append detailed physical descriptions to help Gemini get the 'look' right without names."""
+    t_lower = topic.lower()
+    p_lower = prompt.lower()
+    for name, desc in _CRICKET_PERSONAS.items():
+        if name in t_lower or name in p_lower:
+            return f"{prompt}\n\nSubject Description: {desc}"
+    return prompt
+
 def build_cinematic_background_prompt(
     *,
     topic_title: str,
@@ -111,8 +130,16 @@ def build_cinematic_background_prompt(
             f"Professional sports broadcast aesthetic, dark glassmorphism textures, soft glowing data points, "
             f"and plenty of negative space for text overlays. Cinematic lighting, 8K resolution."
         )
+    elif content_visual_type == "sports" and hint:
+        # DYNAMIC SPORTS ENGINE: Use the LLM's specific visual description for this match/player
+        diverse_prompt = (
+            f"PROFESSIONAL SPORTS PHOTOGRAPHY: {hint}\n\n"
+            f"Style: Cinematic editorial action shot, high-contrast lighting, intense atmosphere, "
+            f"8K resolution, photorealistic, premium sports publication quality. "
+            f"Ensure rich saturated colors matching the story context."
+        )
     else:
-        # Build the diverse, content-type-aware prompt
+        # Build the diverse, content-type-aware prompt from static worlds for other categories
         diverse_prompt = build_diverse_prompt(
             content_type=content_visual_type,
             topic=topic,
@@ -240,8 +267,27 @@ def _generate_slide_pil(
         config=config,
     )
     img = _extract_image_from_response(response)
+    
     if img is None:
-        raise RuntimeError("Gemini returned no image bytes in response")
+        # SAFETY RETRY: If the original prompt was rejected (likely due to people/action),
+        # retry once with a guaranteed-safe inanimate sports prompt.
+        logger.warning(f"⚠️ Gemini rejected image prompt (Safety?). Retrying with Safe Fallback...")
+        safe_prompt = (
+            "A clean, minimalist high-end background of an empty cricket pitch under stadium lights. "
+            "Soft-focus stadium architecture, cinematic floodlighting, dark textures, no people. "
+            "Professional architectural sports photography, 8K resolution, sleek and professional."
+        )
+        safe_parts = [types.Part.from_text(text=safe_prompt)]
+        
+        response_retry = client.models.generate_content(
+            model=model_id,
+            contents=[types.Content(role="user", parts=safe_parts)],
+            config=config,
+        )
+        img = _extract_image_from_response(response_retry)
+
+    if img is None:
+        raise RuntimeError("Gemini returned no image bytes in response (even after safe retry)")
     return img
 
 
@@ -492,6 +538,10 @@ def try_render_gemini_carousel(
             _LOG.error("gemini_carousel_abort slug=%s slide=%s err=%s", slug, i, last_err)
             return None
 
+        # Apply Persona Interceptor for Sports
+        if cvt == "sports":
+            prompt = _apply_persona_descriptions(topic_title or headline, prompt)
+
         fitted = _fit_canvas(raw, tw, th)
 
         if mode == "arxiv_integrated":
@@ -525,9 +575,21 @@ def try_render_gemini_carousel(
                 handle=handle,
                 logo_path=logo_path,
                 sublines=sublines_list,
-                # Prefer the profile logo (if configured) over handle text.
                 show_handle=not bool(logo_path),
                 logo_in_band=True,
+            )
+        elif is_stats and cvt == "sports":
+            composed = compose_sports_stats_slide(
+                fitted,
+                headline=headline,
+                detail_lines=detail_lines or [headline],
+                font_title_candidates=title_fonts,
+                font_body_candidates=body_fonts,
+                highlight_rgb=highlight,
+                primary_rgb=primary,
+                accent_rgb=accent,
+                logo_path=logo_path,
+                slide_label="MATCH INTEL",
             )
         else:
             composed = compose_cinematic_blueprint_slide(

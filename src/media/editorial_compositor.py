@@ -398,6 +398,86 @@ def compose_cinematic_blueprint_slide(
     return img
 
 
+def compose_sports_stats_slide(
+    base_rgb: Image.Image,
+    *,
+    headline: str,
+    detail_lines: Sequence[str],
+    font_title_candidates: List[str],
+    font_body_candidates: List[str],
+    highlight_rgb: Tuple[int, int, int],
+    primary_rgb: Tuple[int, int, int],
+    accent_rgb: Tuple[int, int, int],
+    logo_path: str = "",
+    slide_label: str = "MATCH STATS",
+) -> Image.Image:
+    """
+    Full-screen "Broadcast Stats Card" for Sports.
+    Heavier tinting, bolder metrics, and a clean data-first presentation.
+    """
+    img = base_rgb.convert("RGB")
+    w, h = img.size
+    
+    # 1. Darker, almost full-screen data overlay
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    # Glassmorphism pane
+    margin_pane = 40
+    if hasattr(od, "rounded_rectangle"):
+        od.rounded_rectangle([margin_pane, 100, w - margin_pane, h - 80], radius=32, fill=(8, 12, 18, 210))
+    else:
+        od.rectangle([margin_pane, 100, w - margin_pane, h - 80], fill=(8, 12, 18, 210))
+    img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+
+    # 2. Add accent bar at the top of the card
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([margin_pane + 20, 100, w - margin_pane - 20, 108], fill=accent_rgb)
+
+    # 3. Slide Kicker (e.g. MATCH STATS)
+    y = 135
+    lf = _pick_font(font_body_candidates, 24)
+    draw.text((margin_pane + 40, y), (slide_label or "STATS").upper(), font=lf, fill=highlight_rgb)
+    y += 45
+
+    # 4. Main Metric / Headline
+    raw_head = (headline or "").strip().upper()
+    head_words = raw_head.split()
+    h_font = _pick_font(font_title_candidates, 52)
+    # Fit check
+    for words in _wrap_words_to_width(draw, head_words, h_font, w - 200)[:2]:
+        _draw_word_line(draw, margin_pane + 40, y, words, h_font, primary_rgb, highlight_rgb)
+        bbox = draw.textbbox((0, 0), "Hg", font=h_font)
+        y += (bbox[3] - bbox[1]) + 15
+    y += 20
+
+    # 5. Detail Data Lines
+    d_font = _pick_font(font_body_candidates, 34)
+    for raw in list(detail_lines)[:5]:
+        line = " ".join(str(raw or "").split()).strip()
+        if not line: continue
+        # Handle data bullet formatting (e.g. "Strike Rate: 156.4")
+        if ":" in line:
+            label, val = line.split(":", 1)
+            draw.text((margin_pane + 40, y), label.strip().upper(), font=d_font, fill=(160, 175, 195))
+            # Right-align the value for tabular look
+            val_t = val.strip().upper()
+            v_bbox = draw.textbbox((0, 0), val_t, font=d_font)
+            vx = w - margin_pane - 60 - (v_bbox[2] - v_bbox[0])
+            draw.text((vx, y), val_t, font=d_font, fill=primary_rgb)
+        else:
+            # Standard bullet
+            draw.text((margin_pane + 40, y), f"• {line.upper()}", font=d_font, fill=primary_rgb)
+        
+        y += 65
+        if y > h - 120: break
+
+    # 6. Logo
+    if logo_path:
+        _paste_asset_contain(img, logo_path, (w - 220, 120, w - 60, 180))
+
+    return img
+
+
 def _arxiv_intel_scene_frame(
     base_rgb: Image.Image,
     *,
@@ -614,7 +694,7 @@ def _compose_cover_intel_hero(
     max_tw = w - 2 * margin
     y = panel_top + bar_h + 28
 
-    chip = (brand_label or "AI TECH INTEL").upper().strip()
+    chip = (brand_label or "MATCH INTEL").upper().strip()
     chip_font = _pick_font(font_body_candidates, 28)
     draw.text((margin, y), chip, font=chip_font, fill=highlight_rgb)
     y += 40
@@ -715,6 +795,15 @@ def compose_editorial_slide(
             y = _draw_word_line(draw, tx, y, line_words, body_font, primary_rgb, highlight_rgb)
             sb = draw.textbbox((0, 0), "Hg", font=body_font)
             y += sb[3] - sb[1] + 3
+        else:
+            system_prompt = (
+                f"You are a premium content creator and image stylist. A user provided a description: '{description}' "
+                f"and {len(image_urls)} context images.\n\n"
+                f"Task: Generate {draft_count} distinct draft versions.\n"
+                f"CRITICAL RULES:\n"
+                f"- EVERY slide must be deeply dependent on the provided reference images.\n"
+                f"- Generate high-fidelity image prompts inheriting the visual style of the context images.\n"
+            )
         y += 6
         for stat in [
             "50+ stories monitored daily",

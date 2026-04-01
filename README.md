@@ -5,14 +5,30 @@
 1. Python 3.10+
 2. A `.env` file containing the required configurations. 
 
-## Environment Variables (.env)
+## Environment Setup (.env)
 
-Ensure your `.env` contains at least:
-- `GEMINI_API_KEY`: API Key for Google Gemini.
-- `TELEGRAM_BOT_TOKEN`: Your Telegram Bot API token.
-- `CLOUDINARY_KEY`, `CLOUDINARY_SECRET`, `CLOUDINARY_CLOUD_NAME`: Credentials for image hosting.
-- `BOT_MODE`: Typically set to `polling`.
-- `CUSTOM_POST_DRAFT_COUNT`: Determines how many custom image drafts to generate (e.g., 1 or 2).
+The bot relies on a `.env` file for all configurations. Below is the comprehensive list of required and optional parameters:
+
+| Category | Variable | Description | Default |
+| --- | --- | --- | --- |
+| **Core AI** | `GEMINI_API_KEY` | Google Gemini API Key (Required) | - |
+| | `GEMINI_IMAGE_MODEL` | Gemini Image Model (e.g. `gemini-2.0-flash-exp`) | `gemini-2.0-flash-exp` |
+| | `GEMINI_IMAGE_ASPECT_RATIO` | Generation aspect ratio (`3:4`, `1:1`, `9:16`) | `3:4` |
+| **Telegram** | `TELEGRAM_BOT_TOKEN` | Bot API Token from @BotFather (Required) | - |
+| | `TELEGRAM_CHAT_ID` | Main chat ID for auto-posting | - |
+| | `BOT_MODE` | `polling` (dev) or `webhook` (production) | `polling` |
+| | `WEBHOOK_URL` | App URL for webhook mode | - |
+| **Cloudinary** | `CLOUDINARY_CLOUD_NAME`| Cloudinary Cloud Name (Required) | - |
+| | `CLOUDINARY_KEY` | Cloudinary API Key | - |
+| | `CLOUDINARY_SECRET` | Cloudinary API Secret | - |
+| **Instagram** | `INSTAGRAM_ACCESS_TOKEN`| Long-lived access token for Meta API | - |
+| | `INSTAGRAM_BUSINESS_ACCOUNT_ID`| Instagram Business Account ID | - |
+| **Strategy** | `IMAGE_RENDER_MODE` | `cinematic_overlay` (Modern) or `arxiv_integrated` (3D) | `cinematic_overlay` |
+| | `BRAND_NAME` | Global brand label on slides | `ArXiv Intel` |
+| | `CONTENT_CATEGORY` | Primary vertical (e.g. `technology`, `ipl`) | `technology` |
+| | `PROFILE_LOGO_MODE` | `mark` (Subtle) or `tree` (Bold) | `mark` |
+| | `STORY_MAX_SLIDES` | Max slides per carousel | `6` |
+| | `CUSTOM_POST_DRAFT_COUNT`| Number of drafts to generate for custom prompts | `2` |
 
 ## Installation
 
@@ -24,7 +40,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
-pip install cloudinary python-telegram-bot python-dotenv httpx
+pip install -r requirements.txt
 ```
 
 ## Running the Bot

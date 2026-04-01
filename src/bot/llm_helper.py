@@ -38,20 +38,21 @@ def generate_content(description: str, image_urls: List[str], category: str = "A
         
         if is_cricket:
             system_prompt = (
-                f"You are a Master IPL Strategist and Creative Director. A user provided story data: '{description}' "
+                f"You are a Master IPL Strategist and Creative Director. A user provided trending IPL story data: '{description}' "
                 f"and {len(image_urls)} context images.\n\n"
                 f"Task: Generate {draft_count} versions of this IPL story.\n"
-                f"CRITICAL RULES:\n"
-                f"- USE SPECIFIC CRICKET TERMINOLOGY (Strike Rate, Economy, Death Overs, Powerplay).\n"
-                f"- For slides marked as 'IMAGE': Generate high-impact 'Unreal Engine 5' cinematic image prompts (8K, photorealistic).\n"
-                f"- For slides marked as 'STATS': Generate 'Minimalist Bokeh Sports Background' prompts that don't distract from overlaid text.\n"
-                f"- Every draft must contain the exact number of slides requested in the input data (usually 1 for SINGLE, 5 for CAROUSEL).\n"
+                f"CRITICAL VISUAL RULES:\n"
+                f"- For slides marked as 'IMAGE': Generate high-impact, story-aware visual prompts (8K, photorealistic). "
+                f"Describe the EXACT action of the trending team and players (e.g., 'A powerful right-handed batsman in a yellow jersey crushing a six under bright floodlights').\n"
+                f"- SAFETY: NEVER use real player names in image prompts (this causes rejections). Instead, describe them as 'Elite unidentifiable athlete' or 'Dynamic cricketer in [Team Color] jersey'.\n"
+                f"- AESTHETIC: Focus on intensive action, sweat, stadium haze, and professional sports bokeh. NO 3D renders or generic office shots.\n"
+                f"- For slides marked as 'STATS': Generate 'Minimalist Bokeh Sports Background' prompts focused on stadium architecture or match gear (stumps/pitch) to ensure text readability.\n"
             )
         else:
             system_prompt = (
-                f"You are a premium AI tech content creator and image stylist. A user provided a description: '{description}' "
+                f"You are a premium content creator and image stylist. A user provided a description: '{description}' "
                 f"and {len(image_urls)} context images.\n\n"
-                f"Task: Generate {draft_count} distinct 'DEEP REMIX' draft versions.\n"
+                f"Task: Generate {draft_count} distinct draft versions.\n"
                 f"CRITICAL RULES:\n"
                 f"- EVERY slide must be deeply dependent on the provided reference images.\n"
                 f"- Generate high-fidelity image prompts inheriting the visual style of the context images.\n"

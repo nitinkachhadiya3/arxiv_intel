@@ -218,16 +218,16 @@ def pick_fresh_topic() -> Dict[str, Any]:
     # Ultimate fallback
     print("  ⚠ All sources failed, using hardcoded fallback")
     fallback = {
-        "topic": "AI Industry Reaches $2.5 Trillion in Global Spending",
+        "topic": "IPL 2026: The Strategic Powerplay Revolution (Live)",
         "slides": [
-            "Global AI spending has reached $2.52 trillion in 2026, a 44% increase from 2025.",
-            "88% of companies now report using AI in at least one business function.",
-            "Agentic AI is the fastest-growing segment, with Gartner predicting 40% enterprise adoption.",
-            "The cost of running AI systems continues to fall, making powerful technology accessible to startups."
+            "Powerplay dominance has become the deciding factor in IPL 2026 victory margins.",
+            "Historical data shows matches are being won in the crucial 10th-15th over consolidation phase.",
+            "Strategic Spotlight: Bowlers are now using wide-yorker variations more than traditional bouncers.",
+            "IPL 2026 continues to push the boundaries of T20 tactical innovation and player endurance."
         ],
-        "sources": [{"title": "Industry Reports", "url": "https://buildez.ai"}],
-        "hashtags": "#AI #TechNews #Innovation #FutureOfAI #ArxivIntel",
-        "content_source": "fallback",
+        "sources": [{"title": "IPL Strategy Insights", "url": "https://www.iplt20.com"}],
+        "hashtags": "#IPL2026 #CricketStrategy #Powerplay #T20Cricket #IPLUpdate",
+        "content_source": "fallback_cricket",
     }
     _advance_rotation("gemini_fresh")
     return fallback

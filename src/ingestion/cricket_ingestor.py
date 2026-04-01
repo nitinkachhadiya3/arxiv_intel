@@ -8,6 +8,9 @@ from typing import Any, Dict, Optional
 from google import genai
 from google.genai import types
 
+from dotenv import load_dotenv
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 def pick_best_cricket_topic() -> Optional[Dict[str, Any]]:

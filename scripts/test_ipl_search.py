@@ -1,0 +1,37 @@
+import os
+import json
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def test_cricket_grounding():
+    api_key = os.getenv("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
+    
+    # Using 2.0 Flash for speed and grounding support
+    model_id = "gemini-2.0-flash"
+    
+    prompt = (
+        "Search Google and provide a short summary of the current IPL 2026 match (today or most recent). "
+        "Include teams, scores, and 2 standout players. "
+        "Return the result as JSON: {'match': '...', 'summary': '...', 'key_stats': '...', 'source': '...'}"
+    )
+
+    try:
+        response = client.models.generate_content(
+            model=model_id,
+            contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search_retrieval=types.GoogleSearchRetrieval())],
+                response_mime_type="application/json"
+            )
+        )
+        print(f"--- IPL Grounding Result ({model_id}) ---")
+        print(response.text)
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    test_cricket_grounding()
