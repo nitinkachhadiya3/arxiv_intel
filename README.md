@@ -38,6 +38,13 @@ The bot requires a `.env` file for all configuration. Below is the exhaustive li
 | | `STORY_STRATEGIST_ENABLED`| Toggle AI Strategist (Default: `1`) | - |
 | | `REQUIRE_GEMINI_FOR_PUBLISH`| Validate output before posting (Default: `1`) | - |
 
+## Running Modes
+
+The bot supports two operational modes controlled by the `BOT_MODE` variable:
+
+-   **Polling (`polling`)**: Recommended for **Local Development**. The bot proactively checks for new messages. No public URL or SSL certificate is required.
+-   **Webhook (`webhook`)**: Recommended for **Production** (e.g. Render, AWS). Telegram pushes messages to your `WEBHOOK_URL`. This requires a public HTTPS URL and setting the `PORT` (default `8443`).
+
 ## Installation
 
 Activate your virtual environment and install dependencies:
