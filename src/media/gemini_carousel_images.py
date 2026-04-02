@@ -371,7 +371,8 @@ def try_render_gemini_carousel(
         "sources": [],
     }
     if story_post:
-        for k in ("topic", "slides", "poster_headlines", "visual_prompts", "cover_headline", "sources"):
+        for k in ("topic", "slides", "poster_headlines", "visual_prompts", "cover_headline", "sources",
+                  "content_visual_type", "content_source", "slide_types"):
             if k in story_post and story_post[k]:
                 base_post[k] = story_post[k]  # type: ignore[index]
     brief = ensure_story_brief(base_post, cfg)
@@ -441,9 +442,17 @@ def try_render_gemini_carousel(
         pl = plan[idx] if idx < len(plan) else {}
         role = str(pl.get("role") or (roles[idx] if idx < len(roles) else f"Slide {i}"))
         hl_plan = str(pl.get("headline") or "").strip()
-        hint = str(pl.get("visual_hint") or "").strip()
-        if not hint and idx < len(vp):
+        # For sports content, ALWAYS use the agent-generated visual_prompts
+        # (they contain match-specific cricket cinematic prompts).
+        # For other content, use the story brief's visual_hint first.
+        is_sports = str(brief.get("content_visual_type") or "").strip() == "sports" or \
+                    "ipl" in str(brief.get("content_source") or "").lower()
+        if is_sports and idx < len(vp) and vp[idx]:
             hint = vp[idx]
+        else:
+            hint = str(pl.get("visual_hint") or "").strip()
+            if not hint and idx < len(vp):
+                hint = vp[idx]
         one_idea = str(pl.get("one_idea") or "").strip()
 
         editor_body = ""

@@ -177,11 +177,10 @@ Extract and return a rich JSON object with these exact keys:
 Return ONLY the JSON object, no other text.
 """
             resp = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
                 config=types.GenerateContentConfig(
                     tools=[types.Tool(google_search=types.GoogleSearch())],
-                    response_mime_type="application/json",
                     temperature=0.4,
                 ),
             )

@@ -149,12 +149,18 @@ def fallback_story_brief(post: Dict[str, Any]) -> Dict[str, Any]:
     d2 = "► " + (slides[2][:52] + "…" if len(slides) > 2 and len(slides[2]) > 52 else (slides[2] if len(slides) > 2 else "Why it matters for tech."))
 
     # Classify content type for visual diversity
-    from src.media.visual_diversity import classify_content_type
-    visual_type = classify_content_type(topic, " ".join(str(s) for s in slides[:3]))
+    # BUT: if the caller already set content_visual_type (e.g. sports pipeline), keep it
+    visual_type = str(post.get("content_visual_type", "")).strip()
+    if visual_type not in ("founder", "product", "infrastructure", "news", "insight", "sports"):
+        from src.media.visual_diversity import classify_content_type
+        visual_type = classify_content_type(topic, " ".join(str(s) for s in slides[:3]))
+
+    content_source = str(post.get("content_source", "")).strip() or ""
 
     return {
         "content_type": content_type,
         "content_visual_type": visual_type,
+        "content_source": content_source,
         "reason": "Heuristic fallback from slide count and poster headlines.",
         "content_depth": depth,
         "audience_angle": "curiosity",
@@ -241,6 +247,16 @@ Produce the JSON brief. Enforce slide_plan length <= {_MAX_SLIDES}."""
         parsed["content_type"] = "carousel"
     if parsed["content_type"] == "single":
         parsed["slide_plan"] = plan[:1]
+
+    # ── Preserve caller-specified overrides (e.g. sports pipeline) ────────
+    # The LLM doesn't know about "sports" — it will classify as "news" or "insight".
+    # If the caller explicitly set content_visual_type or content_source, re-inject them.
+    caller_cvt = str(post.get("content_visual_type", "")).strip()
+    if caller_cvt in ("sports",):
+        parsed["content_visual_type"] = caller_cvt
+    caller_src = str(post.get("content_source", "")).strip()
+    if caller_src:
+        parsed["content_source"] = caller_src
 
     log_stage(_LOG, "story_brief_ok", "ok", extra={"type": parsed.get("content_type"), "slides": len(parsed["slide_plan"])})
     return parsed

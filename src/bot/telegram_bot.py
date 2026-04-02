@@ -83,7 +83,10 @@ class _PycRecoveryFinder(importlib.abc.MetaPathFinder):
 # Activate Bytecode Recovery
 sys.meta_path.insert(0, _PycRecoveryFinder(root))
 
-import cloudinary
+try:
+    import cloudinary
+except ImportError:
+    cloudinary = None
 from telegram.ext import ApplicationBuilder
 from src.bot.config import Config
 from src.bot.commands import register_handlers
@@ -99,13 +102,16 @@ def main():
     # 1. Load and validate config
     try:
         Config.validate()
-        # Initialize Cloudinary
-        cloudinary.config(
-            cloud_name=Config.CLOUDINARY_CLOUD_NAME,
-            api_key=Config.CLOUDINARY_KEY,
-            api_secret=Config.CLOUDINARY_SECRET
-        )
-        logger.info("✅ Cloudinary initialized.")
+        # Initialize Cloudinary if available
+        if cloudinary:
+            cloudinary.config(
+                cloud_name=Config.CLOUDINARY_CLOUD_NAME,
+                api_key=Config.CLOUDINARY_KEY,
+                api_secret=Config.CLOUDINARY_SECRET
+            )
+            logger.info("✅ Cloudinary initialized.")
+        else:
+            logger.info("ℹ️ Cloudinary not installed — using local file URLs.")
     except EnvironmentError as e:
         logger.error(f"Configuration error: {e}")
         return

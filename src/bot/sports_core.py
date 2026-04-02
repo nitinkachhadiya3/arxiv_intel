@@ -44,11 +44,28 @@ def generate_sports_previews(query: str = "IPL 2026 today match") -> List[Dict[s
         if not slides:
             continue
 
-        # Build visual_prompts and visual_flags for the renderer
+        # Build visual_prompts, visual_flags, and slide_types for the renderer
         visual_prompts = [s.get("image_prompt", "") for s in slides]
         visual_flags = [s.get("visual_flag", True) for s in slides]
+        slide_types = ["IMAGE" if s.get("visual_flag", True) else "STATS" for s in slides]
         slide_texts = [s.get("caption", "") for s in slides]
         match_title = match_data.get("match_title", "IPL 2026")
+
+        # ── CRITICAL: Build a story_post that forces the sports visual engine ──
+        # The renderer checks these keys to route through the sports path
+        # instead of the default AI/Tech visual diversity engine.
+        story_post = {
+            **match_data,
+            "content_visual_type": "sports",        # Forces sports branch in gemini_carousel_images
+            "content_source": "ipl_grounding",       # Triggers "ipl" detection
+            "visual_flags": visual_flags,
+            "visual_prompts": visual_prompts,
+            "slide_types": slide_types,
+            "slides": slide_texts,
+            "poster_headlines": slide_texts,
+            "topic": match_title,
+            "cover_headline": slide_texts[0][:80] if slide_texts else match_title,
+        }
 
         # Use existing carousel renderer
         from src.media.image_generator import CarouselImageGenerator
@@ -64,7 +81,8 @@ def generate_sports_previews(query: str = "IPL 2026 today match") -> List[Dict[s
                 topic_title=match_title,
                 cover_headline=slide_texts[0][:80] if slide_texts else match_title,
                 visual_prompts=visual_prompts,
-                story_post={**match_data, "visual_flags": visual_flags},
+                story_post=story_post,
+                slide_types=slide_types,
             )
             media_urls = [CloudinaryUploader.upload_file(str(p)) for p in media_paths]
 
@@ -81,3 +99,4 @@ def generate_sports_previews(query: str = "IPL 2026 today match") -> List[Dict[s
         state.update_child("sports", preview_uuid, preview)
 
     return previews
+
