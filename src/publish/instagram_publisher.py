@@ -154,12 +154,31 @@ class InstagramPublisher:
                 "is_carousel_item": "true",
                 "access_token": self.access_token
             }
-            resp = requests.post(f"{self.base_url}/{self.business_id}/media", data=data)
-            if resp.status_code != 200:
-                raise RuntimeError(f"Failed to create child container: {resp.text}")
-            child_ids.append(resp.json()["id"])
-            time.sleep(1) # Reduced Meta safety jitter
-
+            
+            # Retry loop for Meta API transient errors (e.g. Code 2)
+            max_retries = 3
+            for attempt in range(max_retries):
+                resp = requests.post(f"{self.base_url}/{self.business_id}/media", data=data)
+                
+                if resp.status_code == 200:
+                    child_ids.append(resp.json()["id"])
+                    time.sleep(1) # Reduced Meta safety jitter
+                    break
+                    
+                resp_text = resp.text
+                print(f"  ⚠ Meta API Warning during child container (attempt {attempt+1}): {resp_text}")
+                
+                # Check if error is transient
+                is_transient = "is_transient" in resp_text and '"is_transient":true' in resp_text.replace(" ", "")
+                code_2 = '"code":2' in resp_text.replace(" ", "") or '"code": 2' in resp_text
+                
+                if (is_transient or code_2) and attempt < max_retries - 1:
+                    sleep_time = (attempt + 1) * 4  # 4s, 8s backoff
+                    print(f"  ⏳ Transient Meta error detected. Retrying in {sleep_time}s...")
+                    time.sleep(sleep_time)
+                    continue
+                    
+                raise RuntimeError(f"Failed to create child container after {attempt+1} attempts: {resp_text}")
         # 3. Wait for all child containers to be ready
         for cid in child_ids:
             if not self._wait_for_container(cid):

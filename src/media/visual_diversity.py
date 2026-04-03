@@ -18,14 +18,10 @@ from typing import Any, Dict, List, Optional
 # ── BLACKLIST: motifs that make every post look the same ─────────────────
 
 _BANNED_MOTIFS = (
-    "ABSOLUTE VISUAL BANS (these make the grid look robotic/stock-photo):\n"
-    "- NO generic office buildings, floor-to-ceiling windows, or skyscraper skylines unless essential\n"
-    "- NO generic 3D neural networks, glowing brains, or fiber optic cables\n"
-    "- NO solar panels, wind turbines, or power lines unless specifically requested\n"
-    "- NO generic bookshelves, library interiors, or stacks of physical books\n"
-    "- NO blue/cyan 'tech glows' that look like 2010s sci-fi\n"
-    "- NO generic laptops/MacBooks as the main subject unless it's a software review\n"
-    "The image must look like a high-end editorial feature for Wired, Bloomberg, or MIT Tech Review.\n"
+    "COLOR GRADING & VIBRANCY:\n"
+    "- Make the image highly vibrant, colorful, and beautifully saturated.\n"
+    "- Avoid dull or purely dark monochrome unless heavily requested.\n"
+    "The image must look like a high-end, colorful editorial feature for Wired or Bloomberg.\n"
 )
 
 # ── 24 distinct visual "worlds" with GPT-Style Cinematic Prompts ──────────
@@ -326,9 +322,9 @@ SEMANTIC_MAP: Dict[str, str] = {
 _SLIDE_VARIATIONS = {
     1: {  # HOOK — most dramatic
         "instruction": (
-            "HOOK SLIDE: Ultra-striking composition, bold contrast, and cinematic focal point."
+            "HOOK SLIDE: Ultra-striking, hyper-dramatic composition. Visually stunning, must instantly grab attention and dominate the viewer's screen."
         ),
-        "framing": ["wide cinematic", "low angle looking up", "centered symmetrical"],
+        "framing": ["vast cinematic wide shot", "extreme low angle looking up", "surreal symmetrical composition"],
     },
     2: {  # CONTEXT — human scale
         "instruction": (
@@ -357,21 +353,26 @@ def _get_slide_variation(slide_index: int, total_slides: int, rng: random.Random
     elif slide_index == 2: return _SLIDE_VARIATIONS[2]
     else: return _SLIDE_VARIATIONS[3]
 
-def _pick_semantic_world(topic: str, rng: random.Random) -> Dict[str, Any]:
-    """Topic-based semantic world selection with fallback to hashed rotation."""
-    t_lower = topic.lower()
+def _pick_semantic_world(topic: str, visual_hint: str, slide_index: int, rng: random.Random) -> Dict[str, Any]:
+    """Slide-based semantic world selection preferring visual_hint over global topic."""
     
-    # Check for semantic matches
+    # 1. Deep Semantic Matching: Prioritize the specific visual_hint for this slide
+    hint_lower = visual_hint.lower()
     for pattern, world_id in SEMANTIC_MAP.items():
-        if re.search(pattern, t_lower):
+        if hint_lower and re.search(pattern, hint_lower):
             world = next((w for w in VISUAL_WORLDS if w["id"] == world_id), None)
             if world: return world
+            
+    # 2. Topic Matching: Only tightly couple Slide 1 to the raw topic, let others drift if unset
+    if slide_index == 1:
+        t_lower = topic.lower()
+        for pattern, world_id in SEMANTIC_MAP.items():
+            if re.search(pattern, t_lower):
+                world = next((w for w in VISUAL_WORLDS if w["id"] == world_id), None)
+                if world: return world
     
-    # Fallback: hashed rotation for diversity
-    topic_hash = int(hashlib.md5(topic.encode()).hexdigest(), 16)
-    day_salt = int(time.time()) // 86400
-    idx = (topic_hash + day_salt) % len(VISUAL_WORLDS)
-    return VISUAL_WORLDS[idx]
+    # 3. True Randomness: Complete decoupling array for extreme carousel diversity
+    return rng.choice(VISUAL_WORLDS)
 
 def build_diverse_prompt(
     content_type: str,
@@ -383,29 +384,30 @@ def build_diverse_prompt(
 ) -> str:
     """Build a photorealistic, semantic, cinematic prompt."""
     if rng is None:
-        rng = random.Random(int(time.time() * 1000) + slide_index)
+        # Time-salt to completely blast caching across identical topic runs
+        rng = random.Random(int(time.time() * 1000) + slide_index * 999)
 
-    world = _pick_semantic_world(topic, rng)
+    world = _pick_semantic_world(topic, visual_hint, slide_index, rng)
     slide_var = _get_slide_variation(slide_index, total_slides, rng)
     framing = rng.choice(slide_var["framing"])
 
+    # Gently clean up hint instead of brutally dropping it
     hint_block = ""
     if visual_hint:
-        # Filter hint to avoid double "GPT-Style" clashes
-        banned_words = {"glowing", "neural", "circuit", "holographic", "neon", "cyber",
-                        "matrix", "wireframe", "fiber optic", "electrical", "3d render",
-                        "solar", "bookshelf", "office building"}
-        hint_lower = visual_hint.lower()
-        if not any(bw in hint_lower for bw in banned_words):
-            hint_block = f"Direct visual action: {visual_hint}\n\n"
+        clean_hint = re.sub(r"(?i)\b(holographic|neon|cyber|matrix|wireframe)\b", "cinematic", visual_hint)
+        hint_block = f"\nPRIMARY VISUAL DIRECTIVE (FROM USER/REFERENCE): {clean_hint}\nThe above directive is the most important constraint. Generate the image EXACTLY as described above, overriding the Visual World if they conflict. Use vibrant colors.\n"
 
-    prompt = f"""{hint_block}Topic context: {topic}
+    unique_hash = hex(rng.getrandbits(32))[2:]
+    
+    prompt = f"""[UNIQUE SCENE SEED: {unique_hash} | SLIDE {slide_index}/{total_slides}]
+Specific Scene Composition for this frame: {framing}
+Slide objective: {slide_var['instruction']}{hint_block}
+
+Topic context: {topic}
 
 PHOTOGRAPHIC DIRECTION:
 {world['prompt']}
 
-Specific Scene Composition for this slide: {framing}
-Slide goal: {slide_var['instruction']}
 Visual World Identity: {world['name']} ({world['mood']})
 
 {_BANNED_MOTIFS}

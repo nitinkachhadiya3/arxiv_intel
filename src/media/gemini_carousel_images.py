@@ -153,11 +153,13 @@ Closing slide: add a subtle gold wordmark 'ARXIV INTEL' near the bottom center a
 Keep the main 3D focal subject centered; do not add a black or grey caption bar."""
 
     return f"""
+[UNIQUE MAP ID: {int(time.time() * 1000) % 999999}-{slide_index}]
 A professional, high-fidelity 3D isometric technical illustration for the premium editorial brand "{brand}".
 
 Slide {slide_index} of {total_slides} — narrative role: {role}.
 Topic context: {topic}.
 Visual direction: {hint if hint else "Abstract metaphor for the headline — sleek chips, glass panels, data pathways, minimal clutter."}
+
 
 Headline to render EXACTLY (spelling, punctuation): "{hl}"
 Typography: place this headline in clean, legible white professional sans-serif letters integrated into the 3D scene at the TOP of the frame (as if part of the environment — e.g. frosted glass sign, extruded type, or luminous panel). No misspellings. No extra words in the headline.
@@ -387,9 +389,7 @@ def try_render_gemini_carousel(
         pl = plan[idx] if idx < len(plan) else {}
         role = str(pl.get("role") or (roles[idx] if idx < len(roles) else f"Slide {i}"))
         hl_plan = str(pl.get("headline") or "").strip()
-        hint = str(pl.get("visual_hint") or "").strip()
-        if not hint and idx < len(vp):
-            hint = vp[idx]
+        hint = vp[idx] if (idx < len(vp) and vp[idx]) else str(pl.get("visual_hint") or "").strip()
         one_idea = str(pl.get("one_idea") or "").strip()
 
         editor_body = ""
